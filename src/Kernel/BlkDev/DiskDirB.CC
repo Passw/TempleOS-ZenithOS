@@ -54,6 +54,9 @@ Bool Cd(U8 *dirname=NULL,Bool make_dirs=FALSE)
 			drive=Fs->cur_dv;
 			cur_dir_clus=Name2DirClus(drive,new_cur_dir);
 			switch (drive->fs_type) {
+				case FSt_ECHFS:
+					res=EchFSCd(buf,cur_dir_clus);
+					break;
 				case FSt_REDSEA:
 					res=RedSeaCd(buf,cur_dir_clus);
 					break;
@@ -176,6 +179,9 @@ Bool DirMake(U8 *filename,I64 entry_count=0)
 				name=MStrUtil(dirc->mask,
 							SUF_REM_LEADING|SUF_REM_TRAILING|SUF_REM_CTRL_CHARS);
 				switch (dirc->drive->fs_type) {
+					case FSt_ECHFS:
+						res=EchFSMkDir(dirc->drive,Fs->cur_dir,name,entry_count);
+						break;
 					case FSt_REDSEA:
 						res=RedSeaMkDir(dirc->drive,Fs->cur_dir,name,entry_count);
 						break;

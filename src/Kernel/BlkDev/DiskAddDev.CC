@@ -103,6 +103,13 @@ I64 BlkDevAdd(CBlkDev *bd, I64 prt_num=I64_MIN, Bool whole_drive, Bool make_free
 							drive->size 		= mbr.p[i].size;
 							switch (mbr.p[i].type)
 							{
+								case MBR_PT_ECHFS:
+									drive->drive_signature = DRIVE_SIGNATURE_VAL;
+									drive->prt_num = num;
+									res++;
+									drive->fs_type = FSt_ECHFS;
+									EchFSInit(drive);
+									break;
 								case MBR_PT_REDSEA:
 									drive->drive_signature = DRIVE_SIGNATURE_VAL;
 									drive->prt_num = num;
@@ -133,7 +140,7 @@ I64 BlkDevAdd(CBlkDev *bd, I64 prt_num=I64_MIN, Bool whole_drive, Bool make_free
 									break;
 								case MBR_PT_NTFS:
 									drive->drive_signature = DRIVE_SIGNATURE_VAL;
-									drive->prt_num = num;
+									drive->prt_num = num;
 									res++;
 									drive->fs_type = FSt_NTFS;
 									break;

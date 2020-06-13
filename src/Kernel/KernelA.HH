@@ -2716,8 +2716,8 @@ public class CATARep
 #define AHCI_MAX_PORTS			32
 
 //Physical Region Descriptor Table
-#define AHCI_PRD_MAX_BYTES		(4 * 1024 * 1024) //Max bytes that can go in one PRD entry ($ER$4 MiB). Section 4.2.3.3 Fig. 17 (DBC) 
-#define AHCI_PRDT_MAX_BLOCKS	(U16_MAX + 1) 	  //Max blocks you can transfer in one command. 
+#define AHCI_PRD_MAX_BYTES		(4 * 1024 * 1024) //Max bytes that can go in one PRD entry ($ER$4 MiB). Section 4.2.3.3 Fig. 17 (DBC)
+#define AHCI_PRDT_MAX_BLOCKS	(U16_MAX + 1) 	  //Max blocks you can transfer in one command.
 #define AHCI_PRDT_MAX_LEN		8 				  //Max PRD entries in one command. This is equal to (MAX_BLOCKS * BLK_SIZE) ö MAX_BYTES.
 
 //Global Host Control (Controller) flags
@@ -2964,6 +2964,46 @@ class CMasterBoot
 	U16 	zero;
 	CMBRPart p[4];
 	U16 	signature; //AA55
+};
+
+class CEchFSIdTable {
+	U8  jmp[4];
+	U64 signature;
+	U64 block_count;
+	U64 dir_size;
+	U64 bytes_per_block;
+    // After here, these values are for convenience but not on the actual
+    // identity table.
+    U64 fat_size;
+    U64 fat_start;
+    U64 dir_start;
+    U64 sectors_per_block;
+    U64 dir_entries_per_block;
+    U64 dev_cache_state;
+    U64 dev_cached_block;
+    U8 *dev_cache;
+	U8  padding[412];
+};
+
+class CEchFSEntry {
+    U64 parent_id;
+    U8  type;
+    U8  name[201];
+    U64 atime;
+    U64 mtime;
+    U16 perms;
+    U16 owner;
+    U16 group;
+    U64 ctime;
+    U64 payload;
+    U64 size;
+};
+
+class CEchFSPathResult {
+    U64         target_entry;
+    CEchFSEntry target;
+    CEchFSEntry parent;
+    Bool        not_found;
 };
 
 class CRedSeaBoot
@@ -3296,8 +3336,9 @@ public class CBlkDev
 #define FSt_FAT32 		2 //Supported except for short names, to some degree
 #define FSt_ISO9660 	3 //Not Supported
 #define FSt_NTFS		4 //Not Supported
-#define FSt_UNKNOWN 	5
-#define FSt_TYPES_NUM 	6
+#define FSt_ECHFS		5 //Supported and based
+#define FSt_UNKNOWN 	6
+#define FSt_TYPES_NUM 	7
 #define FSG_TYPE_MASK 	0x7FFF
 //File system type flags
 #define FStf_DISABLE	15
@@ -3311,6 +3352,7 @@ public class CBlkDev
 #define MBR_PT_FAT32f 	0x8C
 #define MBR_PT_NTFS 	0x07
 #define MBR_PT_REDSEA 	0x88
+#define MBR_PT_ECHFS	0x69
 
 class CFreeList
 {
@@ -3340,6 +3382,8 @@ public class CDrive
 	CDate fat32_local_time_offset;
 	CTask *owning_task;
 	CBlkDev *bd;
+
+	CEchFSIdTable *echfs_id_table;
 
 	CFAT32FileInfoSect *fis;
 	I64 	fat_blk_dirty,
@@ -3522,7 +3566,7 @@ public class CHeapCtrl
 	CMemUnused *heap_hash[MEM_HEAP_HASH_SIZE/sizeof(U8 *)];
 };
 
-#help_index "Memory/Bump Allocator"
+#help_index "Memory/Bump Allocator"
 #define BALLOC_INIT_BASE	0x500
 
 #help_index "Devices;Memory/Page Tables"
@@ -4074,7 +4118,7 @@ class CRMRegs
 		edx,
 		ecx,
 		ebx,
-		eax;	
+		eax;
 };
 
 #help_index "Memory/Page Tables"

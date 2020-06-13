@@ -10,6 +10,7 @@
 #include "DiskStrB"
 #include "DiskAddDev"
 #include "DiskDirA"
+#include "FileSysEchFS"
 #include "FileSysRedSea"
 #include "FileSysFAT"
 #include "DiskDirContext"

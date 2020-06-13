@@ -21,6 +21,9 @@ I64 Name2DirClus(CDrive *drive,U8 *dirname)
 			StrFirstRemove(buf,"/",buf2);
 			if (*buf2) {
 				switch (drive->fs_type) {
+					case FSt_ECHFS:
+						cont=EchFSFileFind(drive,cur_dir_clus,buf2,&de,FUF_JUST_DIRS);
+						break;
 					case FSt_REDSEA:
 						cont=RedSeaFileFind(drive,cur_dir_clus,buf2,&de,FUF_JUST_DIRS);
 						break;
@@ -62,6 +65,9 @@ I64 Name2ParentDirClus(CDrive *drive,U8 *dirname)
 			StrFirstRemove(buf,"/",buf2);
 			if (*buf2) {
 				switch (drive->fs_type) {
+					case FSt_ECHFS:
+						cont=EchFSFileFind(drive,cur_dir_clus,buf2,&de,FUF_JUST_DIRS);
+						break;
 					case FSt_REDSEA:
 						cont=RedSeaFileFind(drive,cur_dir_clus,buf2,&de,FUF_JUST_DIRS);
 						break;

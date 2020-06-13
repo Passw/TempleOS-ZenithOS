@@ -6,6 +6,10 @@ I64 ClusNumNext(CDrive *drive,I64 c,I64 count=1)
 	try {
 		unlock=DriveLock(drive);
 		switch (drive->fs_type) {
+			case FSt_ECHFS:
+				"echfs: In ClusNumGet\n";
+				while (1) {}
+				break;
 			case FSt_REDSEA:
 				c+=count;
 				break;
@@ -32,6 +36,9 @@ I64 Clus2Blk(CDrive *drive,I64 c)
 {//Drive clus num to blk num.
 	DriveCheck(drive);
 	switch (drive->fs_type) {
+		case FSt_ECHFS:
+			"echfs: In Clus2Blk\n";
+			while (1) {}
 		case FSt_REDSEA:
 			return c;
 		case FSt_FAT32:
@@ -50,6 +57,9 @@ I64 ClusBlkRead(CDrive *drive,U8 *buf,I64 c,I64 blks)
 	try {
 		unlock=DriveLock(drive);
 		switch (drive->fs_type) {
+			case FSt_ECHFS:
+				"echfs: In ClusBlkRead\n";
+				while (1) {}
 			case FSt_REDSEA:
 				BlkRead(drive,buf,c,blks);
 				c+=blks;
@@ -92,6 +102,9 @@ I64 ClusBlkWrite(CDrive *drive,U8 *buf,I64 c,I64 blks)
 	try {
 		unlock=DriveLock(drive);
 		switch (drive->fs_type) {
+			case FSt_ECHFS:
+				"echfs: In ClusBlkWrite\n";
+				while (1) {}
 			case FSt_REDSEA:
 				BlkWrite(drive,buf,c,blks);
 				c=0;
@@ -131,6 +144,9 @@ I64 ClusAlloc(CDrive *drive,I64 c=0,I64 count=1,Bool contiguous=FALSE)
 	DriveCheck(drive);
 	if (count<=0) return c;
 	switch (drive->fs_type) {
+		case FSt_ECHFS:
+			"echfs: In ClusAlloc\n";
+			while (1) {}
 		case FSt_REDSEA:
 			return RedSeaAllocClus(drive,count);
 		case FSt_FAT32:

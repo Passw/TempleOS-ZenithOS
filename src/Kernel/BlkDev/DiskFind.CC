@@ -4,6 +4,9 @@ CDirEntry *FilesFind2(U8 *files_find_mask, I64 fuf_flags)
 	CDirEntry *res=NULL;
 	DriveCheck(drive);
 	switch (drive->fs_type) {
+		case FSt_ECHFS:
+			res=EchFSFilesFind(files_find_mask, fuf_flags);
+			break;
 		case FSt_REDSEA:
 			res=RedSeaFilesFind(files_find_mask, fuf_flags);
 			break;
@@ -69,6 +72,9 @@ Bool FileFind(U8 *filename, CDirEntry *_de=NULL, I64 fuf_flags=0)
 		cur_dir_clus=Name2DirClus(dirc->drive, Fs->cur_dir);
 		switch (dirc->drive->fs_type)
 		{
+			case FSt_ECHFS:
+				res=EchFSFileFind(dirc->drive, cur_dir_clus, dirc->mask,  &de, fuf_flags);
+				break;
 			case FSt_REDSEA:
 				res=RedSeaFileFind(dirc->drive, cur_dir_clus, dirc->mask,  &de, fuf_flags);
 				break;
@@ -96,6 +102,9 @@ Bool FileFind(U8 *filename, CDirEntry *_de=NULL, I64 fuf_flags=0)
 				Cd("..");
 				cur_dir_clus=Name2DirClus(dirc->drive, Fs->cur_dir);
 				switch (dirc->drive->fs_type) {
+					case FSt_ECHFS:
+						res=EchFSFileFind(dirc->drive, cur_dir_clus, dirc->mask, &de, fuf_flags);
+						break;
 					case FSt_REDSEA:
 						res=RedSeaFileFind(dirc->drive, cur_dir_clus, dirc->mask, &de, fuf_flags);
 						break;
