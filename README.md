@@ -17,11 +17,17 @@ Features in development include:
 
 ## Getting started
 
-Every commit contains a "Zenith-latest-XXXX-XX-XX-XX-XX_XX_XX.iso" in the root of master, which is a timestamped ISO build of that commit. It might not be stable. See the "Releases" page for the latest stable release.
+See the [Releases](https://github.com/VoidNV/ZenithOS/releases) page for the latest stable release.
+
+The source code and binary files for ZenithOS can be found in the `src/` directory, and are assembled into a `ZenithOS.hdd` file by running `make_img.sh`. After this, set up a VM and select `ZenithOS.hdd` as the hard disk image, then boot up the VM.
 
 ### Contributing
 
-This basically a read-only repository. Everything happens inside the OS, as intended by Terry. After you've installed the latest release in a VM, you can make changes to the source. Once you've made your changes, you can make copies of the relevant files and put them into a folder, along with some kind of notes as to what you've done as a DolDoc document. You can then make a RedSea ISO file out of that folder by running `RedSeaISO("MyChanges.ISO", "/Home/Folder");`. Mount the VM hard drive in whatever OS-specific way you have to, grab the ISO, and send it my way; a pull request attachment would work fine.
+You can contribute to the repository from inside or outside the OS.
+
+To make changes outside the OS, you can edit files in the `src/` directory, and they will reflect any changes the next time `make_img.sh` is executed. The exception to this is files related to the Kernel, as they are compiled when `BootHDIns;` is run within ZenithOS. In these cases, you must make changes within the OS.
+
+To make changes within the OS, boot up the VM and edit files as necessary. If modifying Kernel files, recompile with `BootHDIns;` before powering-off the VM. When finished, run `export_changes.sh` to pull the files from `ZenithOS.hdd` into the `src/` directory.
 
 ## Background
 
