@@ -36,7 +36,7 @@ Bool EchFSBlkDevCache(CDrive *drive, U64 block) {
             return TRUE;
         case ECHFS_BLKDEV_CACHE_DIRTY:
             "echfs cache flush\n";
-            //while (1) {}
+            while (1) {}
     }
 }
 
@@ -168,7 +168,7 @@ Bool EchFSCd(U8 *name, I64 cur_dir_clus) {
 
 Bool EchFSMkDir(CDrive *drive, U8 *cur_dir, U8 *name, I64 entry_count) {
 	"echfs mkdir\n";
-	//while (1) {}
+	while (1) {}
 }
 
 U0 EchFSInit(CDrive *drive){
@@ -184,7 +184,7 @@ U0 EchFSInit(CDrive *drive){
 
 		if (drive->echfs_id_table->signature != '_ECH_FS_') {
 			"echfs: error: signature mismatch\n";
-            //while (1) {}
+            while (1) {}
 		}
         "echfs: valid signature\n";
 
@@ -229,15 +229,27 @@ U0 EchFSInit(CDrive *drive){
 U8 *EchFSFileWrite(CDrive *drive, U8 *cur_dir, U8 *filename,
 				  U8 *buf, I64 size, CDate cdt, I64 attr) {
 	"echfs write: %s %s\n", cur_dir, filename;
-	//while (1) {}
+	while (1) {}
 }
 
-U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename,
-				  I64 *size, I64 *attr) {
+U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename, I64 *_size, I64 *_attr) {
 	U8 *full_path, *buf, *p;
     CEchFSPathResult pres;
     U64 cur_block, fat_addr;
-    CEchFSIdTable *id_tab = drive->echfs_id_table;
+    CEchFSIdTable *id_tab;
+
+    *_size = 0;
+    *_attr = 0;
+
+    if (drive->fs_type != FSt_ECHFS) {
+        PrintErr("Not EchFS Drive\n");
+        return NULL;
+    }
+
+    if (!filename || !*filename) {
+        PrintErr("Invalid filename\n");
+        return NULL;
+    }
 
     full_path = MAlloc(StrLen(cur_dir) + 1 + StrLen(filename) + 1);
     StrCopy(full_path, cur_dir);
@@ -245,27 +257,45 @@ U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename,
         StrCopy(full_path + StrLen(full_path), "/");
     StrCopy(full_path + StrLen(full_path), filename);
 
-    if (!EchFSResolvePath(drive, &pres, full_path, ECHFS_TYPE_FILE, ECHFS_ROOT_DIR_ID)) {
+    try {
+        DriveLock(drive);
+
+        id_tab = drive->echfs_id_table;
+
+        if (!EchFSResolvePath(drive, &pres, full_path, ECHFS_TYPE_FILE, ECHFS_ROOT_DIR_ID)) {
+            Free(full_path);
+            DriveUnlock(drive);
+            return NULL;
+        }
+
         Free(full_path);
-        return NULL;
-    }
 
-    Free(full_path);
+        if (pres.not_found) {
+            DriveUnlock(drive);
+            return NULL;
+        }
 
-    if (pres.not_found)
-        return NULL;
+        buf = MAlloc(CeilI64(pres.target.size(I64), id_tab->bytes_per_block) + 1);
+        p = buf;
 
-    buf = MAlloc(CeilI64(pres.target.size, id_tab->bytes_per_block));
-    p = buf;
+        fat_addr = id_tab->fat_start * id_tab->bytes_per_block;
 
-    fat_addr = id_tab->fat_start * id_tab->bytes_per_block;
+        for (cur_block = pres.target.payload; cur_block != ECHFS_END_OF_CHAIN;
+             EchFSBlkDevRead(drive, &cur_block, fat_addr + cur_block * sizeof(U64),
+                             sizeof(U64))) {
+            EchFSBlkDevRead(drive, buf, cur_block * id_tab->bytes_per_block,
+                            id_tab->bytes_per_block);
+            buf += id_tab->bytes_per_block;
+        }
 
-    for (cur_block = pres.target.payload; cur_block != ECHFS_END_OF_CHAIN;
-         EchFSBlkDevRead(drive, &cur_block, fat_addr + cur_block * sizeof(U64),
-                         sizeof(U64))) {
-        EchFSBlkDevRead(drive, buf, cur_block * id_tab->bytes_per_block,
-                        id_tab->bytes_per_block);
-        buf += id_tab->bytes_per_block;
+        p[pres.target.size] = 0;
+
+        *_size = pres.target.size(I64);
+        *_attr = 0;
+
+        DriveUnlock(drive);
+    } catch {
+        DriveUnlock(drive);
     }
 
     return p;
@@ -354,34 +384,65 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, I64 fuf_flags, CDirEntry *parent=
     }
 }
 
-Bool EchFSFileFind(CDrive *drive,I64 cur_dir_clus,U8 *name,
+Bool EchFSFileFind(CDrive *drive,I64 cur_dir_clus,U8 *filename,
 			       CDirEntry *_res,I64 fuf_flags=0) {
+    U8 name[CDIR_FILENAME_LEN];
     CEchFSPathResult pres;
     U64 type;
     U16 attr = 0;
+    Bool unlock;
 
-    type = ECHFS_TYPE_ANY;
-
-    if (fuf_flags & FUF_JUST_DIRS && !(fuf_flags & FUF_JUST_FILES))
-        type = ECHFS_TYPE_DIR;
-    else if (fuf_flags & FUF_JUST_FILES && !(fuf_flags & FUF_JUST_DIRS))
-        type = ECHFS_TYPE_FILE;
-
-    if (!EchFSResolvePath(drive, &pres, name, type, cur_dir_clus(U64)))
-        return FALSE;
-
-    switch (pres.target.type) {
-        case ECHFS_TYPE_DIR:
-            attr |= RS_ATTR_DIR;
-    }
+    if (fuf_flags & ~FUG_FILE_FIND)
+        throw('FUF');
 
     MemSet(_res, 0, sizeof(CDirEntry));
 
-    MemCopy(_res->name, pres.target.name, CDIR_FILENAME_LEN - 1);
-    _res->name[CDIR_FILENAME_LEN-1] = 0;
-    _res->clus = pres.target.payload;
-    _res->size = pres.target.size;
-    _res->attr = attr;
+    DriveCheck(drive);
+
+    if (drive->fs_type != FSt_ECHFS) {
+        PrintErr("Not EchFS Drive\n");
+        return FALSE;
+    }
+
+    if (!CFileNameTo(name, filename)) {
+        PrintErr("Invalid filename: %s\n", filename);
+        return FALSE;
+    }
+
+    type = ECHFS_TYPE_ANY;
+
+    try {
+        unlock = DriveLock(drive);
+
+        if (fuf_flags & FUF_JUST_DIRS && !(fuf_flags & FUF_JUST_FILES))
+            type = ECHFS_TYPE_DIR;
+        else if (fuf_flags & FUF_JUST_FILES && !(fuf_flags & FUF_JUST_DIRS))
+            type = ECHFS_TYPE_FILE;
+
+        if (!EchFSResolvePath(drive, &pres, name, type, cur_dir_clus(U64)) ||
+            pres.not_found) {
+            if (unlock)
+                DriveUnlock(drive);
+            return FALSE;
+        }
+
+        switch (pres.target.type) {
+            case ECHFS_TYPE_DIR:
+                attr |= RS_ATTR_DIR;
+        }
+
+        MemCopy(_res->name, pres.target.name, CDIR_FILENAME_LEN - 1);
+        _res->name[CDIR_FILENAME_LEN-1] = 0;
+        _res->clus = pres.target.payload;
+        _res->size = pres.target.size;
+        _res->attr = attr;
+
+        if (unlock)
+            DriveUnlock(drive);
+    } catch {
+        if (unlock)
+            DriveUnlock(drive);
+    }
 
     return TRUE;
 }
