@@ -180,7 +180,7 @@ Bool DirMake(U8 *filename,I64 entry_count=0)
 							SUF_REM_LEADING|SUF_REM_TRAILING|SUF_REM_CTRL_CHARS);
 				switch (dirc->drive->fs_type) {
 					case FSt_ECHFS:
-						res=EchFSMkDir(dirc->drive,Fs->cur_dir,name,entry_count);
+						res=EchFSMkDir(dirc->drive,Fs->cur_dir,name);
 						break;
 					case FSt_REDSEA:
 						res=RedSeaMkDir(dirc->drive,Fs->cur_dir,name,entry_count);

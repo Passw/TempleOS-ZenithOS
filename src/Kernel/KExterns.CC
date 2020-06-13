@@ -99,7 +99,7 @@ extern U8 *EchFSFileWrite(CDrive *drive, U8 *cur_dir, U8 *filename, U8 *buf, I64
 extern CDirEntry *EchFSFilesFind(U8 *files_find_mask, I64 fuf_flags, CDirEntry *parent=NULL);
 extern Bool EchFSFileFind(CDrive *drive, I64 cur_dir_clus, U8 *filename, CDirEntry *_res, I64 fuf_flags=0);
 extern Bool EchFSCd(U8 *name, I64 cur_dir_clus);
-extern Bool EchFSMkDir(CDrive *drive, U8 *cur_dir, U8 *name, I64 entry_count);
+extern Bool EchFSMkDir(CDrive *drive, U8 *cur_dir, U8 *name);
 
 extern CTask *SpawnQueue(U0 (*fp_addr)(U8 *data),U8 *data=NULL,
 		U8 *task_name=NULL,I64 target_cpu,CTask *parent=NULL, //NULL means zenith

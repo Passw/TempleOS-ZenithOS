@@ -24,16 +24,7 @@ EOF
 # Format it as FAT32
 echfs-utils -v -m -p0 ZenithOS.hdd quick-format 32768
 
-mkdir -p mnt
-echfs-fuse --mbr -p0 ZenithOS.hdd mnt
-
-cp -rv src/* mnt/
-
-sync
-
-fusermount -u mnt
-
-rm -rf mnt
+./copy-root-to-img.sh src ZenithOS.hdd 0
 
 # Install qloader2
 

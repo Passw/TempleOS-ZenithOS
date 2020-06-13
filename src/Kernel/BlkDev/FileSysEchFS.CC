@@ -1,5 +1,6 @@
-#define ECHFS_ROOT_DIR_ID  0xffffffffffffffff
-#define ECHFS_END_OF_CHAIN 0xffffffffffffffff
+#define ECHFS_ROOT_DIR_ID   0xffffffffffffffff
+#define ECHFS_END_OF_CHAIN  0xffffffffffffffff
+#define ECHFS_DELETED_ENTRY 0xfffffffffffffffe
 
 #define ECHFS_TYPE_ANY  0xff
 #define ECHFS_TYPE_FILE 0
@@ -13,13 +14,6 @@
 #define ECHFS_BLKDEV_CACHE_READY    1
 #define ECHFS_BLKDEV_CACHE_DIRTY    2
 
-Bool EchFSBlkDevReadBlocks(CDrive *drive, U8 *dest, U64 loc, U64 count) {
-    U64 i;
-    for (i = 0; i < count; i++)
-        if (!BlkRead(drive, dest + i * 512, loc + i * 512, 1))
-            return FALSE;
-}
-
 Bool EchFSBlkDevCache(CDrive *drive, U64 block) {
     switch (drive->echfs_id_table->dev_cache_state) {
         case ECHFS_BLKDEV_CACHE_READY:
@@ -27,34 +21,58 @@ Bool EchFSBlkDevCache(CDrive *drive, U64 block) {
                 return TRUE;
             // FALLTHRU
         case ECHFS_BLKDEV_CACHE_NOTREADY:
-            //EchFSBlkDevReadBlocks(drive, drive->echfs_id_table->dev_cache,
+        loadup:
             BlkRead(drive, drive->echfs_id_table->dev_cache,
-                                  drive->drv_offset + block,
-                                  ECHFS_BLKDEV_BLOCK_SIZE / 512);
+                    drive->drv_offset + block, 1);
             drive->echfs_id_table->dev_cached_block = block;
             drive->echfs_id_table->dev_cache_state  = ECHFS_BLKDEV_CACHE_READY;
             return TRUE;
         case ECHFS_BLKDEV_CACHE_DIRTY:
-            "echfs cache flush\n";
-            while (1) {}
+            if (block == drive->echfs_id_table->dev_cached_block)
+                return TRUE;
+            BlkWrite(drive, drive->echfs_id_table->dev_cache,
+                     drive->drv_offset + drive->echfs_id_table->dev_cached_block, 1);
+            goto loadup;
     }
 }
 
 Bool EchFSBlkDevRead(CDrive *drive, U8 *buffer, U64 loc, U64 count) {
     U64 block, chunk, offset, progress = 0;
     while (progress < count) {
-        block = (loc + progress) / ECHFS_BLKDEV_BLOCK_SIZE;
+        block = (loc + progress) / BLK_SIZE;
 
         if (!EchFSBlkDevCache(drive, block))
             return FALSE;
 
         chunk = count - progress;
-        offset = (loc + progress) % ECHFS_BLKDEV_BLOCK_SIZE;
-        if (chunk > ECHFS_BLKDEV_BLOCK_SIZE - offset)
-            chunk = ECHFS_BLKDEV_BLOCK_SIZE - offset;
+        offset = (loc + progress) % BLK_SIZE;
+        if (chunk > BLK_SIZE - offset)
+            chunk = BLK_SIZE - offset;
 
         MemCopy(buffer + progress, &drive->echfs_id_table->dev_cache[offset], chunk);
         progress += chunk;
+    }
+
+    return TRUE;
+}
+
+Bool EchFSBlkDevWrite(CDrive *drive, U8 *buffer, U64 loc, U64 count) {
+    U64 block, chunk, offset, progress = 0;
+    while (progress < count) {
+        block = (loc + progress) / BLK_SIZE;
+
+        if (!EchFSBlkDevCache(drive, block))
+            return FALSE;
+
+        chunk = count - progress;
+        offset = (loc + progress) % BLK_SIZE;
+        if (chunk > BLK_SIZE - offset)
+            chunk = BLK_SIZE - offset;
+
+        MemCopy(&drive->echfs_id_table->dev_cache[offset], buffer + progress, chunk);
+        progress += chunk;
+
+        drive->echfs_id_table->dev_cache_state = ECHFS_BLKDEV_CACHE_DIRTY;
     }
 
     return TRUE;
@@ -69,6 +87,20 @@ Bool EchFSReadEntry(CDrive *drive, CEchFSEntry *ret, U64 entry) {
         return FALSE;
 
     if (!EchFSBlkDevRead(drive, ret, loc, sizeof(CEchFSEntry)))
+        return FALSE;
+
+    return TRUE;
+}
+
+Bool EchFSWriteEntry(CDrive *drive, CEchFSEntry *p, U64 entry) {
+    CEchFSIdTable *id_tab = drive->echfs_id_table;
+    U64 loc = id_tab->dir_start * id_tab->bytes_per_block +
+              entry * sizeof(CEchFSEntry);
+
+    if (loc >= (id_tab->dir_start + id_tab->dir_size) * id_tab->bytes_per_block)
+        return FALSE;
+
+    if (!EchFSBlkDevWrite(drive, p, loc, sizeof(CEchFSEntry)))
         return FALSE;
 
     return TRUE;
@@ -166,12 +198,88 @@ Bool EchFSCd(U8 *name, I64 cur_dir_clus) {
     return TRUE;
 }
 
-Bool EchFSMkDir(CDrive *drive, U8 *cur_dir, U8 *name, I64 entry_count) {
-	"echfs mkdir\n";
-	while (1) {}
+Bool EchFSFindEmptyEntry(CDrive *drive, U64 *_free_entry, U64 *_free_dir_id) {
+    CEchFSIdTable *id_tab = drive->echfs_id_table;
+    U64 i;
+    CEchFSEntry entry;
+
+    *_free_entry  = 0;
+    *_free_dir_id = 1;
+
+    for (i = 0; id_tab->dir_size * id_tab->dir_entries_per_block; i++) {
+        if (!EchFSReadEntry(drive, &entry, i))
+            return FALSE;
+
+        if (!entry.parent_id) {
+            if (!_free_entry)
+                *_free_entry = i;
+            return TRUE;
+        }
+
+        if (entry.parent_id == ECHFS_DELETED_ENTRY) {
+            if (!_free_entry)
+                *_free_entry = i;
+        } else {
+            if (entry.type == ECHFS_TYPE_DIR && entry.payload == *_free_dir_id)
+                (*_free_dir_id)++;
+        }
+    }
+
+    return FALSE;
 }
 
-U0 EchFSInit(CDrive *drive){
+Bool EchFSMkDir(CDrive *drive, U8 *cur_dir, U8 *name) {
+    U8 *full_path;
+    CEchFSPathResult pres;
+    CEchFSEntry entry;
+    U64 i, entry_id, free_dir_id;
+
+    full_path = MAlloc(StrLen(cur_dir) + 1 + StrLen(name) + 1);
+    StrCopy(full_path, cur_dir);
+    if (cur_dir[StrLen(cur_dir)-1] != '/')
+        StrCopy(full_path + StrLen(full_path), "/");
+    StrCopy(full_path + StrLen(full_path), name);
+
+    try {
+        DriveLock(drive);
+
+        if (!EchFSResolvePath(drive, &pres, full_path, ECHFS_TYPE_ANY, ECHFS_ROOT_DIR_ID)) {
+            Free(full_path);
+            DriveUnlock(drive);
+            return FALSE;
+        }
+
+        Free(full_path);
+
+        if (!pres.not_found) {
+            DriveUnlock(drive);
+            return FALSE;
+        }
+
+        if (!EchFSFindEmptyEntry(drive, &entry_id, &free_dir_id))
+            return FALSE;
+
+        MemSet(&entry, 0, sizeof(CEchFSEntry));
+
+        StrCopy(entry.name, name);
+        entry.parent_id = pres.parent.payload;
+        entry.type      = ECHFS_TYPE_DIR;
+        entry.payload   = free_dir_id;
+
+        if (!EchFSWriteEntry(drive, &entry, entry_id)) {
+            DriveUnlock(drive);
+            return FALSE;
+        }
+
+        DriveUnlock(drive);
+        return TRUE;
+    } catch {
+        DriveUnlock(drive);
+        return FALSE;
+    }
+}
+
+U0 EchFSInit(CDrive *drive) {
 	"EchFSInit called\n";
 
 	Bool unlock;
@@ -183,10 +291,10 @@ U0 EchFSInit(CDrive *drive){
 		BlkRead(drive, drive->echfs_id_table, drive->drv_offset, 1);
 
 		if (drive->echfs_id_table->signature != '_ECH_FS_') {
-			"echfs: error: signature mismatch\n";
+			RawPrint(3000, "echfs: error: signature mismatch\n");
             while (1) {}
 		}
-        "echfs: valid signature\n";
+        "echfs: Valid signature\n";
 
         "echfs: Block count: %u\n", drive->echfs_id_table->block_count;
 
@@ -211,7 +319,7 @@ U0 EchFSInit(CDrive *drive){
             drive->echfs_id_table->sectors_per_block * 2;
 
         drive->echfs_id_table->dev_cache_state = ECHFS_BLKDEV_CACHE_NOTREADY;
-        drive->echfs_id_table->dev_cache       = MAlloc(ECHFS_BLKDEV_BLOCK_SIZE);
+        drive->echfs_id_table->dev_cache       = MAlloc(BLK_SIZE);
 
 		drive->fs_type   = FSt_ECHFS;
         drive->root_clus = -1;
@@ -228,7 +336,7 @@ U0 EchFSInit(CDrive *drive){
 
 U8 *EchFSFileWrite(CDrive *drive, U8 *cur_dir, U8 *filename,
 				  U8 *buf, I64 size, CDate cdt, I64 attr) {
-	"echfs write: %s %s\n", cur_dir, filename;
+	RawPrint(3000, "echfs write: %s %s\n", cur_dir, filename);
 	while (1) {}
 }
 
@@ -355,6 +463,8 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, I64 fuf_flags, CDirEntry *parent=
             if (entry.parent_id == parent_id &&
                 FilesFindMatch(entry.name, files_find_mask, fuf_flags)) {
                 node = CAlloc(sizeof(CDirEntry));
+
+                attr = 0;
 
                 switch (entry.type) {
                     case ECHFS_TYPE_DIR:
