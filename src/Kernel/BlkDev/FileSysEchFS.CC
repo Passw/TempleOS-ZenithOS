@@ -272,14 +272,93 @@ U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename,
 }
 
 CDirEntry *EchFSFilesFind(U8 *files_find_mask, I64 fuf_flags, CDirEntry *parent=NULL) {
-    "echfs files find\n";
-    //while (1) {}
+    // This function creates a tree of directory Fs->cur_dir.
+    // CDirEntry* returned points to the first entry of a linked list describing
+    // the entries of Fs->cur_dir.
+    // ->next points to the next entry in the same dir.
+    // ->sub is set for entries of directory type IF fuf_flag "FUf_RECURSE" is set
+    // else it is set to NULL.
+    // ->sub will point to the linked list describing the entries of the entry's
+    // described directory.
+    // ->parent is NULL for all entries at the base level (Fs->cur_dir).
+    // ->parent points to the beginning of the parent directory's linked list
+    // for all entries of subdirectories of Fs->cur_dir (see ->sub).
+    // Furthermore, for each entry found in a given directory, one must add the
+    // the entry to the tree if and only if a call to FilesFindMatch() with arguments
+    // FilesFindMatch(entry_name, files_find_mask, fuf_flag) returns TRUE.
+
+    CDrive *drive = Fs->cur_dv;
+    CDirEntry *node, *ret = NULL;
+    CEchFSIdTable *id_tab;
+    CEchFSEntry entry;
+    U64 i, parent_id;
+    U16 attr;
+    CEchFSPathResult pres;
+
+    if (fuf_flags & ~FUG_FILES_FIND)
+        throw('FUF');
+
+    try {
+        DriveLock(drive);
+
+        id_tab = drive->echfs_id_table;
+
+        if (parent == NULL) {
+            if (!EchFSResolvePath(drive, &pres, Fs->cur_dir, ECHFS_TYPE_DIR, ROOT_DIR_ID))
+                return NULL;
+
+            if (pres.not_found)
+                return NULL;
+
+            parent_id = pres.target.payload;
+        } else {
+            parent_id = parent->clus(U64);
+        }
+
+        for (i = 0; i < id_tab->dir_size * id_tab->dir_entries_per_block; i++) {
+            if (!EchFSReadEntry(drive, &entry, i))
+                return ret;
+
+            if (!entry.parent_id)
+                return ret;
+
+            if (entry.parent_id == parent_id &&
+                FilesFindMatch(entry.name, files_find_mask, fuf_flags)) {
+                node = CAlloc(sizeof(CDirEntry));
+
+                switch (entry.type) {
+                    case ECHFS_TYPE_DIR:
+                        attr |= RS_ATTR_DIR;
+                }
+
+                MemCopy(node->name, entry.name, CDIR_FILENAME_LEN - 1);
+                node->name[CDIR_FILENAME_LEN-1] = 0;
+                node->clus = entry.payload;
+                node->size = entry.size;
+                node->attr = attr;
+
+                if (Bt(&fuf_flags, FUf_RECURSE) && attr & RS_ATTR_DIR) {
+                    DriveUnlock(drive);
+                    node->sub = EchFSFilesFind(files_find_mask, fuf_flags, node);
+                    DriveLock(drive);
+                }
+
+                node->parent = parent;
+
+                node->next = ret;
+                ret = node;
+            }
+        }
+    } catch {
+        DriveUnlock(drive);
+    }
 }
 
 Bool EchFSFileFind(CDrive *drive,I64 cur_dir_clus,U8 *name,
 			       CDirEntry *_res,I64 fuf_flags=0) {
     CEchFSPathResult pres;
     U64 type;
+    U16 attr = 0;
 
     type = ECHFS_TYPE_ANY;
 
@@ -291,12 +370,18 @@ Bool EchFSFileFind(CDrive *drive,I64 cur_dir_clus,U8 *name,
     if (!EchFSResolvePath(drive, &pres, name, type, cur_dir_clus(U64)))
         return FALSE;
 
+    switch (pres.target.type) {
+        case ECHFS_TYPE_DIR:
+            attr |= RS_ATTR_DIR;
+    }
+
     MemSet(_res, 0, sizeof(CDirEntry));
 
     MemCopy(_res->name, pres.target.name, CDIR_FILENAME_LEN - 1);
     _res->name[CDIR_FILENAME_LEN-1] = 0;
     _res->clus = pres.target.payload;
     _res->size = pres.target.size;
+    _res->attr = attr;
 
     return TRUE;
 }
