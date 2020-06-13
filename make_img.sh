@@ -12,7 +12,7 @@ while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 [ -f ZenithOS.hdd ] && mv ZenithOS.hdd ZenithOS.hdd.bak
 
 # 512GiB sparse file flat image
-dd if=/dev/zero bs=1024M count=0 seek=512 of=ZenithOS.hdd
+dd if=/dev/zero bs=1024M count=0 seek=8 of=ZenithOS.hdd
 
 # 1 partition to cover the whole image
 parted -s ZenithOS.hdd mklabel msdos
