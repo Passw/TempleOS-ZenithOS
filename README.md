@@ -25,7 +25,7 @@ The source code and binary files for ZenithOS can be found in the `src/` directo
 
 You can contribute to the repository from inside or outside the OS.
 
-To make changes outside the OS, you can edit files in the `src/` directory, and they will reflect any changes the next time `make_img.sh` is executed. The exception to this is files related to the Kernel or the Compiler, as both are compiled when `BootHDIns;` is run within ZenithOS. In these cases, you must make changes within the OS.
+To make changes outside the OS, you can edit files in the `src/` directory, and changes will be reflected in the OS the next time `make_img.sh` is executed. The exception to this is files related to the Kernel or the Compiler, as both are compiled when `BootHDIns;` is run within ZenithOS. In these cases, you must make changes within the OS.
 
 To make changes within the OS, boot up the VM and edit files as necessary. If modifying Kernel files, recompile with `BootHDIns;`. if modifying Compiler files, recompile with `CompComp;`. Reboot to see if everything is fine before powering-off the VM. When finished, run `export_changes.sh` to pull the files from `ZenithOS.hdd` into the `src/` directory.
 
