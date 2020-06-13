@@ -1,5 +1,5 @@
-#define ROOT_DIR_ID  0xffffffffffffffff
-#define END_OF_CHAIN 0xffffffffffffffff
+#define ECHFS_ROOT_DIR_ID  0xffffffffffffffff
+#define ECHFS_END_OF_CHAIN 0xffffffffffffffff
 
 #define ECHFS_TYPE_ANY  0xff
 #define ECHFS_TYPE_FILE 0
@@ -109,9 +109,9 @@ Bool EchFSResolvePath(CDrive *drive, CEchFSPathResult *ret, U8 *path, U8 type,
                 // If looking for a directory called "/", return root, as it does
                 // not have an entry
                 ret->target.type    = ECHFS_TYPE_DIR;
-                ret->target.payload = ROOT_DIR_ID;
+                ret->target.payload = ECHFS_ROOT_DIR_ID;
                 ret->parent.type    = ECHFS_TYPE_DIR;
-                ret->parent.payload = ROOT_DIR_ID;
+                ret->parent.payload = ECHFS_ROOT_DIR_ID;
                 return TRUE;
             case ECHFS_TYPE_FILE:
                 // Fail if looking for a file named "/"
@@ -245,7 +245,7 @@ U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename,
         StrCopy(full_path + StrLen(full_path), "/");
     StrCopy(full_path + StrLen(full_path), filename);
 
-    if (!EchFSResolvePath(drive, &pres, full_path, ECHFS_TYPE_FILE, ROOT_DIR_ID)) {
+    if (!EchFSResolvePath(drive, &pres, full_path, ECHFS_TYPE_FILE, ECHFS_ROOT_DIR_ID)) {
         Free(full_path);
         return NULL;
     }
@@ -260,7 +260,7 @@ U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename,
 
     fat_addr = id_tab->fat_start * id_tab->bytes_per_block;
 
-    for (cur_block = pres.target.payload; cur_block != END_OF_CHAIN;
+    for (cur_block = pres.target.payload; cur_block != ECHFS_END_OF_CHAIN;
          EchFSBlkDevRead(drive, &cur_block, fat_addr + cur_block * sizeof(U64),
                          sizeof(U64))) {
         EchFSBlkDevRead(drive, buf, cur_block * id_tab->bytes_per_block,
@@ -304,7 +304,7 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, I64 fuf_flags, CDirEntry *parent=
         id_tab = drive->echfs_id_table;
 
         if (parent == NULL) {
-            if (!EchFSResolvePath(drive, &pres, Fs->cur_dir, ECHFS_TYPE_DIR, ROOT_DIR_ID))
+            if (!EchFSResolvePath(drive, &pres, Fs->cur_dir, ECHFS_TYPE_DIR, ECHFS_ROOT_DIR_ID))
                 return NULL;
 
             if (pres.not_found)
