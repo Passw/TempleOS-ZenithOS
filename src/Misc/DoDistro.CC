@@ -22,11 +22,11 @@ U0 MakeMyISO(U8 *_out_iso_filename)
 
 	CopyTree(BOOT_DIR,		"/Distro" BOOT_DIR);
 	CopyTree("/Home", 		"/Distro/Home");
-	CopyTree("/Zenith", 	"/Distro/Zenith");
+	CopyTree("/Zenith", 	"/Distro/Zenith");
 	CopyTree("/Apps", 		"/Distro/Apps");
-	CopyTree("/Compiler", "/Distro/Compiler");
+	CopyTree("/Compiler", 	"/Distro/Compiler");
 	CopyTree("/Demo", 		"/Distro/Demo");
-	CopyTree("/Doc",			"/Distro/Doc");
+	CopyTree("/Doc",		"/Distro/Doc");
 	CopyTree("/Kernel", 	"/Distro/Kernel");
 	CopyTree("/Misc", 		"/Distro/Misc");
 
