@@ -188,12 +188,22 @@ next:
 
 Bool EchFSCd(U8 *name, I64 cur_dir_clus) {
     CEchFSPathResult pres;
+    Bool unlock, ret;
 
-    if (!EchFSResolvePath(Fs->cur_dv, &pres, name, ECHFS_TYPE_DIR, cur_dir_clus(U64)))
-        return FALSE;
+    try {
+        unlock = DriveLock(Fs->cur_dv);
 
-    if (pres.not_found)
-        return FALSE;
+        ret = EchFSResolvePath(Fs->cur_dv, &pres, name, ECHFS_TYPE_DIR, cur_dir_clus(U64));
+
+        if (unlock)
+            DriveUnlock(Fs->cur_dv);
+
+        if (!ret || pres.not_found)
+            return FALSE;
+    } catch {
+        if (unlock)
+            DriveUnlock(Fs->cur_dv);
+    }
 
     return TRUE;
 }
@@ -233,6 +243,7 @@ Bool EchFSMkDir(CDrive *drive, U8 *cur_dir, U8 *name) {
     CEchFSPathResult pres;
     CEchFSEntry entry;
     U64 entry_id, free_dir_id;
+    Bool unlock;
 
     full_path = MAlloc(StrLen(cur_dir) + 1 + StrLen(name) + 1);
     StrCopy(full_path, cur_dir);
@@ -241,23 +252,22 @@ Bool EchFSMkDir(CDrive *drive, U8 *cur_dir, U8 *name) {
     StrCopy(full_path + StrLen(full_path), name);
 
     try {
-        DriveLock(drive);
+        unlock = DriveLock(drive);
 
         if (!EchFSResolvePath(drive, &pres, full_path, ECHFS_TYPE_ANY, ECHFS_ROOT_DIR_ID)) {
             Free(full_path);
-            DriveUnlock(drive);
+            if (unlock)
+                DriveUnlock(drive);
             return FALSE;
         }
 
         Free(full_path);
 
-        if (!pres.not_found) {
-            DriveUnlock(drive);
+        if (!pres.not_found || !EchFSFindEmptyEntry(drive, &entry_id, &free_dir_id)) {
+            if (unlock)
+                DriveUnlock(drive);
             return FALSE;
         }
-
-        if (!EchFSFindEmptyEntry(drive, &entry_id, &free_dir_id))
-            return FALSE;
 
         MemSet(&entry, 0, sizeof(CEchFSEntry));
 
@@ -267,14 +277,17 @@ Bool EchFSMkDir(CDrive *drive, U8 *cur_dir, U8 *name) {
         entry.payload   = free_dir_id;
 
         if (!EchFSWriteEntry(drive, &entry, entry_id)) {
-            DriveUnlock(drive);
+            if (unlock)
+                DriveUnlock(drive);
             return FALSE;
         }
 
-        DriveUnlock(drive);
+        if (unlock)
+            DriveUnlock(drive);
         return TRUE;
     } catch {
-        DriveUnlock(drive);
+        if (unlock)
+            DriveUnlock(drive);
         return FALSE;
     }
 }
@@ -324,13 +337,11 @@ U0 EchFSInit(CDrive *drive) {
 		drive->fs_type   = FSt_ECHFS;
         drive->root_clus = -1;
 
-		if (unlock) {
+		if (unlock)
 			DriveUnlock(drive);
-		}
 	} catch {
-		if (unlock) {
+		if (unlock)
 			DriveUnlock(drive);
-		}
 	}
 }
 
@@ -350,6 +361,48 @@ Bool EchFSFreeBlockChain(CDrive *drive, U64 block) {
     }
 
 	return TRUE;
+}
+
+Bool EchFSAllocBlockChain(CDrive *drive, U64 *_block, U64 count) {
+    U64 fat_addr, cur_block, i;
+    CEchFSIdTable *id_tab;
+    Bool unlock;
+
+	if (!count)
+		return TRUE;
+
+    try {
+        unlock = DriveLock(drive);
+
+        id_tab   = drive->echfs_id_table;
+        fat_addr = id_tab->fat_start * id_tab->bytes_per_block;
+
+        *_block  = ECHFS_END_OF_CHAIN;
+
+        for (i = 0; i < id_tab->block_count; i++) {
+            EchFSBlkDevRead(drive, &cur_block, fat_addr + i * sizeof(U64),
+                            sizeof(U64));
+            if (!cur_block) {
+                EchFSBlkDevWrite(drive, _block, fat_addr + i * sizeof(U64),
+                                 sizeof(U64));
+                *_block = i;
+
+                if (--count == 0) {
+                    if (unlock)
+                        DriveUnlock(drive);
+                    return TRUE;
+                }
+            }
+        }
+
+        if (unlock)
+            DriveUnlock(drive);
+    } catch {
+        if (unlock)
+            DriveUnlock(drive);
+    }
+
+    return FALSE;
 }
 
 I64 EchFSFilesDel(CDrive *drive, U8 *cur_dir, U8 *files_find_mask,
@@ -383,7 +436,9 @@ I64 EchFSFilesDel(CDrive *drive, U8 *cur_dir, U8 *files_find_mask,
                                   ECHFS_TYPE_ANY, ECHFS_ROOT_DIR_ID) || pres.not_found)
                 goto continue;
 
-            "Del %s\n", pres.target.name;
+            if (print_msg)
+                "Del %s\n", pres.target.name;
+
             ret++;
 
             if (!(entry->attr & RS_ATTR_DIR))
@@ -413,10 +468,89 @@ unlock_and_quit:
     return ret;
 }
 
-U8 *EchFSFileWrite(CDrive *drive, U8 *cur_dir, U8 *filename,
-				  U8 *buf, I64 size, CDate cdt, I64 attr) {
-	RawPrint(3000, "echfs write: %s %s\n", cur_dir, filename);
-	while (1) {}
+I64 EchFSFileWrite(CDrive *drive, U8 *cur_dir, U8 *filename, U8 *buf, I64 size, CDate cdt, I64 attr) {
+	U8 *full_path;
+    CEchFSPathResult pres;
+    U64 cur_block, start_block, fat_addr, size_in_blocks, entry_id, dir_id;
+    CEchFSIdTable *id_tab;
+    Bool unlock;
+    CEchFSEntry entry;
+
+    if (size < 0)
+        size = 0;
+
+    if (drive->fs_type != FSt_ECHFS) {
+        PrintErr("Not EchFS Drive\n");
+        return 0;
+    }
+
+    if (!filename || !*filename) {
+        PrintErr("Invalid filename\n");
+        return 0;
+    }
+
+    full_path = MAlloc(StrLen(cur_dir) + 1 + StrLen(filename) + 1);
+    StrCopy(full_path, cur_dir);
+    if (cur_dir[StrLen(cur_dir)-1] != '/')
+        StrCopy(full_path + StrLen(full_path), "/");
+    StrCopy(full_path + StrLen(full_path), filename);
+
+    try {
+        unlock = DriveLock(drive);
+
+        id_tab = drive->echfs_id_table;
+
+        if (!EchFSResolvePath(drive, &pres, full_path, ECHFS_TYPE_FILE, ECHFS_ROOT_DIR_ID)) {
+            Free(full_path);
+            if (unlock)
+                DriveUnlock(drive);
+            return 0;
+        }
+
+        Free(full_path);
+
+        if (!pres.not_found)
+            EchFSFilesDel(drive, cur_dir, filename, 0, FALSE, FALSE);
+
+        size_in_blocks = (size + id_tab->bytes_per_block - 1) / id_tab->bytes_per_block;
+
+        if (!EchFSAllocBlockChain(drive, &start_block, size_in_blocks)) {
+            if (unlock)
+                DriveUnlock(drive);
+            return 0;
+        }
+
+        fat_addr = id_tab->fat_start * id_tab->bytes_per_block;
+
+        for (cur_block = start_block; cur_block != ECHFS_END_OF_CHAIN;
+             EchFSBlkDevRead(drive, &cur_block, fat_addr + cur_block * sizeof(U64),
+                             sizeof(U64))) {
+            EchFSBlkDevWrite(drive, buf, cur_block * id_tab->bytes_per_block,
+                             id_tab->bytes_per_block);
+            buf += id_tab->bytes_per_block;
+        }
+
+        MemSet(&entry, 0, sizeof(CEchFSEntry));
+
+        entry.parent_id = pres.parent.payload;
+        entry.type      = ECHFS_TYPE_FILE;
+        StrCopy(entry.name, filename);
+        entry.payload   = start_block;
+        entry.size      = size;
+
+        EchFSFindEmptyEntry(drive, &entry_id, &dir_id);
+        EchFSWriteEntry(drive, &entry, entry_id);
+
+        if (unlock)
+            DriveUnlock(drive);
+
+        return start_block(I64);
+    } catch {
+        if (unlock)
+            DriveUnlock(drive);
+    }
+
+    return 0;
 }
 
 U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename, I64 *_size, I64 *_attr) {
@@ -424,6 +558,7 @@ U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename, I64 *_size, I64 *_at
     CEchFSPathResult pres;
     U64 cur_block, fat_addr;
     CEchFSIdTable *id_tab;
+    Bool unlock;
 
     *_size = 0;
     *_attr = 0;
@@ -445,20 +580,22 @@ U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename, I64 *_size, I64 *_at
     StrCopy(full_path + StrLen(full_path), filename);
 
     try {
-        DriveLock(drive);
+        unlock = DriveLock(drive);
 
         id_tab = drive->echfs_id_table;
 
         if (!EchFSResolvePath(drive, &pres, full_path, ECHFS_TYPE_FILE, ECHFS_ROOT_DIR_ID)) {
             Free(full_path);
-            DriveUnlock(drive);
+            if (unlock)
+                DriveUnlock(drive);
             return NULL;
         }
 
         Free(full_path);
 
         if (pres.not_found) {
-            DriveUnlock(drive);
+            if (unlock)
+                DriveUnlock(drive);
             return NULL;
         }
 
@@ -480,9 +617,11 @@ U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename, I64 *_size, I64 *_at
         *_size = pres.target.size(I64);
         *_attr = 0;
 
-        DriveUnlock(drive);
+        if (unlock)
+            DriveUnlock(drive);
     } catch {
-        DriveUnlock(drive);
+        if (unlock)
+            DriveUnlock(drive);
     }
 
     return p;
@@ -511,21 +650,23 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, U8 *cur_dir, I64 fuf_flags, CDirE
     U64 i, parent_id;
     U16 attr;
     CEchFSPathResult pres;
+    Bool unlock;
 
     if (fuf_flags & ~FUG_FILES_FIND)
         throw('FUF');
 
     try {
-        DriveLock(drive);
+        unlock = DriveLock(drive);
 
         id_tab = drive->echfs_id_table;
 
         if (parent == NULL) {
-            if (!EchFSResolvePath(drive, &pres, cur_dir, ECHFS_TYPE_DIR, ECHFS_ROOT_DIR_ID))
+            if (!EchFSResolvePath(drive, &pres, cur_dir, ECHFS_TYPE_DIR, ECHFS_ROOT_DIR_ID) ||
+                pres.not_found) {
+                if (unlock)
+                    DriveUnlock(drive);
                 return NULL;
-
-            if (pres.not_found)
-                return NULL;
+            }
 
             parent_id = pres.target.payload;
         } else {
@@ -533,11 +674,11 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, U8 *cur_dir, I64 fuf_flags, CDirE
         }
 
         for (i = 0; i < id_tab->dir_size * id_tab->dir_entries_per_block; i++) {
-            if (!EchFSReadEntry(drive, &entry, i))
+            if (!EchFSReadEntry(drive, &entry, i) || !entry.parent_id) {
+                if (unlock)
+                    DriveUnlock(drive);
                 return ret;
-
-            if (!entry.parent_id)
-                return ret;
+            }
 
             if (entry.parent_id == parent_id &&
                 FilesFindMatch(entry.name, files_find_mask, fuf_flags)) {
@@ -558,11 +699,9 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, U8 *cur_dir, I64 fuf_flags, CDirE
 
                 if (Bt(&fuf_flags, FUf_RECURSE) && attr & RS_ATTR_DIR) {
 					node->full_name = DirNameAbs(entry.name);
-                    DriveUnlock(drive);
 					Cd(entry.name);
                     node->sub = EchFSFilesFind(files_find_mask, fuf_flags, node);
 					Cd("..");
-                    DriveLock(drive);
                 } else {
 					node->full_name = FileNameAbs(entry.name);
 				}
@@ -573,8 +712,12 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, U8 *cur_dir, I64 fuf_flags, CDirE
                 ret = node;
             }
         }
+
+        if (unlock)
+            DriveUnlock(drive);
     } catch {
-        DriveUnlock(drive);
+        if (unlock)
+            DriveUnlock(drive);
     }
 }
 
@@ -590,8 +733,6 @@ Bool EchFSFileFind(CDrive *drive,I64 cur_dir_clus,U8 *filename,
         throw('FUF');
 
     MemSet(_res, 0, sizeof(CDirEntry));
-
-    DriveCheck(drive);
 
     if (drive->fs_type != FSt_ECHFS) {
         PrintErr("Not EchFS Drive\n");
