@@ -170,6 +170,9 @@ U0 KMain()
 	LBts(&sys_run_level,RLf_INTERRUPTS);
 
 	TimeCal;
+	KbdMouseInit;
+	Spawn(&MouseHardDriverInstall);
+
 	BlkDevsInitAll;
 	"DiskChange(':');\n";
 	DiskChange(':');
@@ -197,11 +200,6 @@ U0 KMain()
 						"Core0StartMP;"
 						"LBts(&sys_run_level,RLf_MP);");
 	};
-
-	KbdMouseInit;
-	MouseInit;
-	KbdInit;
-	Spawn(&MouseHardDriverInstall);
 
 	"Loading Compiler\n";
 	Cd("/Compiler");

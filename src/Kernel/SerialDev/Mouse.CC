@@ -381,4 +381,6 @@ U0 KbdMouseInit()
 	mouse_hard.pos.x=sys_vbe_mode.width>>1;
 	mouse_hard.pos.y=sys_vbe_mode.height>>1;
 	MemCopy(&mouse_hard_last,&mouse_hard,sizeof(CMouseHardStateGlobals));
+	MouseInit;
+	KbdInit;
 }

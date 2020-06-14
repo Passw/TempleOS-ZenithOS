@@ -140,7 +140,7 @@ I64 BlkDevAdd(CBlkDev *bd, I64 prt_num=I64_MIN, Bool whole_drive, Bool make_free
 									break;
 								case MBR_PT_NTFS:
 									drive->drive_signature = DRIVE_SIGNATURE_VAL;
-									drive->prt_num = num;
+									drive->prt_num = num;
 									res++;
 									drive->fs_type = FSt_NTFS;
 									break;
@@ -226,26 +226,26 @@ Bool GetBaseUnit(CBlkDev *bd)
 		"\n\nEnter 4-digit hex I/O Port number.\n"
 		"CD/DVD I/O Port Base0: 0x";
 
-		bd->base0 = SysI64Get;
-		bd->base1 = 0;
-		bd->unit  = 0;
-		if (bd->base0)
+		blkdev.dvd_boot_is_good = FALSE;
+
+		while (!blkdev.dvd_boot_is_good)
 		{
-			"\nUnit (0 or 1): ";
-			do ch = CharGet(, FALSE);
-			while (!('0' <= ch <= '1'));
-			'' ch;
-			bd->unit = ch - '0';
-			blkdev.dvd_boot_is_good = BootDVDProbe(bd);
-			return TRUE;
-		}
-		else
-		{
-			blkdev.dvd_boot_is_good = FALSE;
-			return FALSE;
+			bd->base0 = SysI64Get;
+			bd->base1 = 0;
+			bd->unit  = 0;
+			if (bd->base0)
+			{
+				"\nUnit (0 or 1): ";
+				do ch = CharGet(, FALSE);
+				while (!('0' <= ch <= '1'));
+				'' ch;
+				bd->unit = ch - '0';
+				'\n\n';
+				blkdev.dvd_boot_is_good = BootDVDProbe(bd);
+			}
 		}
 	}
-	return FALSE;
+	return TRUE;
 }
 
 U0 BlkDevsInitAll()
