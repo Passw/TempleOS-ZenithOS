@@ -86,6 +86,10 @@ I64 Del(U8 *files_find_mask,Bool make_mask=FALSE,
 	CDirContext *dirc;
 	if (dirc=DirContextNew(files_find_mask,make_mask)) {
 		switch (dirc->drive->fs_type) {
+			case FSt_ECHFS:
+				res=EchFSFilesDel(dirc->drive,Fs->cur_dir,dirc->mask,
+							0,del_dir,print_message);
+				break;
 			case FSt_REDSEA:
 				res=RedSeaFilesDel(dirc->drive,Fs->cur_dir,dirc->mask,
 							0,del_dir,print_message);

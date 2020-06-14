@@ -232,7 +232,7 @@ Bool EchFSMkDir(CDrive *drive, U8 *cur_dir, U8 *name) {
     U8 *full_path;
     CEchFSPathResult pres;
     CEchFSEntry entry;
-    U64 i, entry_id, free_dir_id;
+    U64 entry_id, free_dir_id;
 
     full_path = MAlloc(StrLen(cur_dir) + 1 + StrLen(name) + 1);
     StrCopy(full_path, cur_dir);
@@ -334,6 +334,85 @@ U0 EchFSInit(CDrive *drive) {
 	}
 }
 
+Bool EchFSFreeBlockChain(CDrive *drive, U64 block) {
+    U64 fat_addr, cur_block, free_block = 0;
+    CEchFSIdTable *id_tab;
+
+    id_tab   = drive->echfs_id_table;
+    fat_addr = id_tab->fat_start * id_tab->bytes_per_block;
+
+    while (block != ECHFS_END_OF_CHAIN) {
+        EchFSBlkDevRead(drive, &cur_block, fat_addr + block * sizeof(U64),
+                        sizeof(U64));
+        EchFSBlkDevWrite(drive, &free_block, fat_addr + block * sizeof(U64),
+                         sizeof(U64));
+        block = cur_block;
+    }
+
+	return TRUE;
+}
+
+I64 EchFSFilesDel(CDrive *drive, U8 *cur_dir, U8 *files_find_mask,
+                  I64 fuf_flags, Bool del_dir, Bool print_msg) {
+    Bool unlock_break, unlock;
+    CEchFSIdTable *id_tab;
+    CDirEntry *tree = NULL, *entry;
+    CEchFSPathResult pres;
+    U64 ret = 0;
+
+    try {
+        unlock_break = BreakLock;
+        unlock       = DriveLock(drive);
+
+        id_tab = drive->echfs_id_table;
+
+        tree = EchFSFilesFind(files_find_mask, cur_dir, fuf_flags & ~FUf_RECURSE);
+        if (!tree)
+            goto unlock_and_quit;
+
+        entry = tree;
+        while (TRUE) {
+            if (entry->attr & RS_ATTR_DIR) {
+                if (!del_dir)
+                    goto continue;
+
+                ret += EchFSFilesDel(drive, &entry->full_name[2], "*", 0, TRUE, print_msg);
+            }
+
+            if (!EchFSResolvePath(drive, &pres, &entry->full_name[2],
+                                  ECHFS_TYPE_ANY, ECHFS_ROOT_DIR_ID) || pres.not_found)
+                goto continue;
+
+            "Del %s\n", pres.target.name;
+            ret++;
+
+            if (!(entry->attr & RS_ATTR_DIR))
+                EchFSFreeBlockChain(drive, pres.target.payload);
+
+            pres.target.parent_id = ECHFS_DELETED_ENTRY;
+            EchFSWriteEntry(drive, &pres.target, pres.target_entry);
+
+        continue:
+            if (entry->next)
+                entry = entry->next;
+            else
+                break;
+        }
+
+        LinkedListDel(tree);
+    } catch {
+        if (tree)
+            LinkedListDel(tree);
+    }
+
+unlock_and_quit:
+    if (unlock_break)
+        BreakUnlock;
+    if (unlock)
+        DriveUnlock(drive);
+    return ret;
+}
+
 U8 *EchFSFileWrite(CDrive *drive, U8 *cur_dir, U8 *filename,
 				  U8 *buf, I64 size, CDate cdt, I64 attr) {
 	RawPrint(3000, "echfs write: %s %s\n", cur_dir, filename);
@@ -409,7 +488,7 @@ U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename, I64 *_size, I64 *_at
     return p;
 }
 
-CDirEntry *EchFSFilesFind(U8 *files_find_mask, I64 fuf_flags, CDirEntry *parent=NULL) {
+CDirEntry *EchFSFilesFind(U8 *files_find_mask, U8 *cur_dir, I64 fuf_flags, CDirEntry *parent=NULL) {
     // This function creates a tree of directory Fs->cur_dir.
     // CDirEntry* returned points to the first entry of a linked list describing
     // the entries of Fs->cur_dir.
@@ -442,7 +521,7 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, I64 fuf_flags, CDirEntry *parent=
         id_tab = drive->echfs_id_table;
 
         if (parent == NULL) {
-            if (!EchFSResolvePath(drive, &pres, Fs->cur_dir, ECHFS_TYPE_DIR, ECHFS_ROOT_DIR_ID))
+            if (!EchFSResolvePath(drive, &pres, cur_dir, ECHFS_TYPE_DIR, ECHFS_ROOT_DIR_ID))
                 return NULL;
 
             if (pres.not_found)
@@ -478,10 +557,15 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, I64 fuf_flags, CDirEntry *parent=
                 node->attr = attr;
 
                 if (Bt(&fuf_flags, FUf_RECURSE) && attr & RS_ATTR_DIR) {
+					node->full_name = DirNameAbs(entry.name);
                     DriveUnlock(drive);
+					Cd(entry.name);
                     node->sub = EchFSFilesFind(files_find_mask, fuf_flags, node);
+					Cd("..");
                     DriveLock(drive);
-                }
+                } else {
+					node->full_name = FileNameAbs(entry.name);
+				}
 
                 node->parent = parent;
 

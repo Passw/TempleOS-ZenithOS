@@ -5,7 +5,7 @@ CDirEntry *FilesFind2(U8 *files_find_mask, I64 fuf_flags)
 	DriveCheck(drive);
 	switch (drive->fs_type) {
 		case FSt_ECHFS:
-			res=EchFSFilesFind(files_find_mask, fuf_flags);
+			res=EchFSFilesFind(files_find_mask, Fs->cur_dir, fuf_flags);
 			break;
 		case FSt_REDSEA:
 			res=RedSeaFilesFind(files_find_mask, fuf_flags);
