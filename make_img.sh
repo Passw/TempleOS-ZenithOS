@@ -27,8 +27,8 @@ sudo mkfs.fat `cat loopback_dev`p1
 mkdir -p mnt
 sudo mount `cat loopback_dev`p1 mnt
 
-sudo cp -rv src/* mnt/
-
+sudo cp -r src/* mnt/
+echo "copied src files"
 sudo sync
 
 sudo umount mnt
@@ -42,3 +42,4 @@ rm loopback_dev
 [ -d qloader2 ] || git clone https://github.com/qloader2/qloader2.git
 
 qloader2/qloader2-install qloader2/qloader2.bin ZenithOS.hdd
+echo "installed qloader2"

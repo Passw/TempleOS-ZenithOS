@@ -3,7 +3,7 @@
 ![goto counter](https://img.shields.io/github/search/VoidNV/ZenithOS/goto?style=flat-square)
 # ZenithOS
 
-The Zenith Operating System is a modernized, professional fork of the 64-bit Temple Operating System.
+The Zenith Operating System is a modernized, professional fork of the 64-bit Temple Operating System. It is a direct reaction against Jewish technological subversion, and also against the corporate takeover of free and open source software to be used as a mouthpiece for furthering their political agenda.
 
 Features in development include:
   - Fully-functional AHCI support.
@@ -48,6 +48,10 @@ Changes include:
   - Reformatted code for readability
 
 ## Screenshots
+
+System Report, Z Splash and AutoComplete, with Stars wallpaper
+
+![](/screenshots/screenshot3.png)
 
 32-bit color!
 
