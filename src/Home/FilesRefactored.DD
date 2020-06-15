@@ -36,7 +36,12 @@ StartOS.CC
 		ZDiskA.CC
 		ZDiskB.CC
 
+/Compiler/
+	CompilerA.HH
+
 /Kernel/
+	KStart64.CC
+
 	BlkDev/
 		DiskATA.CC
 		DiskATAId.CC
@@ -44,5 +49,5 @@ StartOS.CC
 		DiskBlk.CC
 		DiskBlkDev.CC
 		DiskCDDVD.CC
-		DiskCFile.CC
+		DiskCFile.CC
 $FG,7$-Tom$FG,0$
