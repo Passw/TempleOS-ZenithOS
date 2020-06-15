@@ -94,13 +94,9 @@ extern U0 RedSeaInit(CDrive *drive);
 extern Bool RedSeaValidate(U8 drv_let);
 
 extern U0 EchFSInit(CDrive *drive);
-extern U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename, I64 *_size, I64 *_attr);
-extern I64 EchFSFileWrite(CDrive *drive, U8 *cur_dir, U8 *filename, U8 *buf, I64 size, CDate cdt, I64 attr);
+extern Bool EchFSDirNew(CDrive *drive,U8 *cur_dir,CDirEntry *entry);
 extern CDirEntry *EchFSFilesFind(U8 *files_find_mask, U8 *cur_dir, I64 fuf_flags, CDirEntry *parent=NULL);
 extern Bool EchFSFileFind(CDrive *drive, I64 cur_dir_clus, U8 *filename, CDirEntry *_res, I64 fuf_flags=0);
-extern Bool EchFSCd(U8 *name, I64 cur_dir_clus);
-extern Bool EchFSMkDir(CDrive *drive, U8 *cur_dir, U8 *name);
-extern I64 EchFSFilesDel(CDrive *drive, U8 *cur_dir, U8 *files_find_mask, I64 fuf_flags, Bool del_dir, Bool print_msg);
 
 extern CTask *SpawnQueue(U0 (*fp_addr)(U8 *data),U8 *data=NULL,
 		U8 *task_name=NULL,I64 target_cpu,CTask *parent=NULL, //NULL means zenith

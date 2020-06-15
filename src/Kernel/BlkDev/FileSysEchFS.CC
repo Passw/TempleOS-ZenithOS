@@ -221,13 +221,13 @@ Bool EchFSFindEmptyEntry(CDrive *drive, U64 *_free_entry, U64 *_free_dir_id) {
             return FALSE;
 
         if (!entry.parent_id) {
-            if (!_free_entry)
+            if (!*_free_entry)
                 *_free_entry = i;
             return TRUE;
         }
 
         if (entry.parent_id == ECHFS_DELETED_ENTRY) {
-            if (!_free_entry)
+            if (!*_free_entry)
                 *_free_entry = i;
         } else {
             if (entry.type == ECHFS_TYPE_DIR && entry.payload == *_free_dir_id)
@@ -290,6 +290,10 @@ Bool EchFSMkDir(CDrive *drive, U8 *cur_dir, U8 *name) {
             DriveUnlock(drive);
         return FALSE;
     }
+}
+
+Bool EchFSDirNew(CDrive *drive, U8 *cur_dir, CDirEntry *entry) {
+    return EchFSMkDir(drive, cur_dir, entry->name);
 }
 
 U0 EchFSInit(CDrive *drive) {
@@ -697,7 +701,7 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, U8 *cur_dir, I64 fuf_flags, CDirE
                 node->size = entry.size;
                 node->attr = attr;
 
-                if (Bt(&fuf_flags, FUf_RECURSE) && attr & RS_ATTR_DIR) {
+                if (fuf_flags & FUf_RECURSE && attr & RS_ATTR_DIR) {
 					node->full_name = DirNameAbs(entry.name);
 					Cd(entry.name);
                     node->sub = EchFSFilesFind(files_find_mask, fuf_flags, node);

@@ -1,6 +1,8 @@
 Bool DirNew(CDrive *drive,U8 *cur_dir,CDirEntry *tmpde,Bool free_old_chain=TRUE)
 {//Makes a directory entry in the directory from a $LK,"CDirEntry",A="MN:CDirEntry"$ node.
 	switch (drive->fs_type) {
+		case FSt_ECHFS:
+			return EchFSDirNew(drive,cur_dir,tmpde);
 		case FSt_REDSEA:
 			return RedSeaDirNew(drive,cur_dir,tmpde,free_old_chain);
 		case FSt_FAT32:

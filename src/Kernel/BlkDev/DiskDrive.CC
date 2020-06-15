@@ -98,7 +98,7 @@ U0 DriveFATBlkAlloc(CDrive *drive)
 
 U0 DriveFATBlkClean(CDrive *drive,I64 fat_sel=3)
 {
-	if ((drive->fs_type==FSt_ECHFS || drive->fs_type==FSt_FAT32 || drive->fs_type==FSt_REDSEA) &&
+	if ((drive->fs_type==FSt_FAT32 || drive->fs_type==FSt_REDSEA) &&
 			 Bt(&drive->fat_blk_dirty,0)) {
 		if (drive->fat1==drive->fat2) {
 			BlkWrite(drive,drive->cur_fat_blk,drive->fat1+drive->cur_fat_blk_num,1);
@@ -121,7 +121,7 @@ U0 DriveFATBlkSet(CDrive *drive,I64 c,I64 fat_sel=3)
 		throw('Drive');
 	switch (drive->fs_type) {
 		case FSt_ECHFS:
-			"echfs: In DriveFATBlkSet\n";
+			RawPrint(3000, "echfs: In DriveFATBlkSet\n");
 			while (1) {}
 		case FSt_FAT32:
 			fat_blk_num=c>>(BLK_SIZE_BITS-2);
