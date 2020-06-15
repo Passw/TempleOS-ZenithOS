@@ -560,7 +560,7 @@ I64 EchFSFileWrite(CDrive *drive, U8 *cur_dir, U8 *filename, U8 *buf, I64 size, 
 U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename, I64 *_size, I64 *_attr) {
 	U8 *full_path, *buf, *p;
     CEchFSPathResult pres;
-    U64 cur_block, fat_addr;
+    U64 i, fat_addr, size_in_blocks, *block_chain;
     CEchFSIdTable *id_tab;
     Bool unlock;
 
@@ -603,18 +603,28 @@ U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename, I64 *_size, I64 *_at
             return NULL;
         }
 
-        buf = MAlloc(CeilI64(pres.target.size(I64), id_tab->bytes_per_block) + 1);
+        size_in_blocks = (pres.target.size + id_tab->bytes_per_block - 1) / id_tab->bytes_per_block;
+
+        buf = MAlloc(size_in_blocks * id_tab->bytes_per_block + 1);
         p = buf;
 
         fat_addr = id_tab->fat_start * id_tab->bytes_per_block;
 
-        for (cur_block = pres.target.payload; cur_block != ECHFS_END_OF_CHAIN;
-             EchFSBlkDevRead(drive, &cur_block, fat_addr + cur_block * sizeof(U64),
-                             sizeof(U64))) {
-            EchFSBlkDevRead(drive, buf, cur_block * id_tab->bytes_per_block,
+		block_chain = MAlloc((size_in_blocks + 1) * sizeof(U64));
+
+		block_chain[0] = pres.target.payload;
+		for (i = 1; block_chain[i-1] != ECHFS_END_OF_CHAIN; i++) {
+			EchFSBlkDevRead(drive, &block_chain[i], fat_addr + block_chain[i-1] * sizeof(U64),
+							sizeof(U64));
+        }
+
+		for (i = 0; block_chain[i] != ECHFS_END_OF_CHAIN; i++) {
+            EchFSBlkDevRead(drive, buf, block_chain[i] * id_tab->bytes_per_block,
                             id_tab->bytes_per_block);
             buf += id_tab->bytes_per_block;
-        }
+		}
+
+        Free(block_chain);
 
         p[pres.target.size] = 0;
 
