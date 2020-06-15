@@ -37,7 +37,7 @@ export-fat32:
 	sudo losetup -d `cat loopback_dev`
 	rm -rf mnt
 	rm loopback_dev
-	sudo chown -R $USER:$USER src
+	sudo chown -R $$USER:$$USER src
 
 echfs:
 	dd if=/dev/zero bs=1024M count=0 seek=8 of=ZenithOS.hdd
