@@ -263,7 +263,7 @@ U0 FMRebuildDoc(CDoc **_doc, CDirEntry **_head, I64 mode)
 				tmpde->user_data2 |= DEF2_NOT_INITIALIZED;
 			}
 		}
-		else if (drive->fs_type == FSt_REDSEA || drive->fs_type == FSt_FAT32)
+		else if (drive->fs_type == FSt_REDSEA || drive->fs_type == FSt_FAT32 || drive->fs_type == FSt_ECHFS)
 			FMRebuildDocDrive(Drive2Letter(drive), doc, _head, TRUE);
 	}
 	DocTop(doc);

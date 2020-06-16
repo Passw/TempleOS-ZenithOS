@@ -425,6 +425,7 @@ I64 EchFSFilesDel(CDrive *drive, U8 *cur_dir, U8 *files_find_mask, I64 fuf_flags
 	CDirEntry *tree = NULL, *entry;
 	CEchFSPathResult pres;
 	U64 ret = 0;
+	U8 *saved_cur_dir;
 
 	try
 	{
@@ -433,7 +434,15 @@ I64 EchFSFilesDel(CDrive *drive, U8 *cur_dir, U8 *files_find_mask, I64 fuf_flags
 
 		id_tab = drive->echfs_id_table;
 
-		tree = EchFSFilesFind(files_find_mask, cur_dir, fuf_flags & ~FUf_RECURSE);
+		saved_cur_dir = MAlloc(StrLen(Fs->cur_dir));
+		StrCopy(saved_cur_dir, Fs->cur_dir);
+
+		Cd(cur_dir);
+		tree = EchFSFilesFind(files_find_mask, fuf_flags & ~FUF_RECURSE);
+		Cd(saved_cur_dir);
+
+		Free(saved_cur_dir);
+
 		if (!tree)
 			goto unlock_and_quit;
 
@@ -655,7 +664,7 @@ U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename, I64 *_size, I64 *_at
 	return p;
 }
 
-CDirEntry *EchFSFilesFind(U8 *files_find_mask, U8 *cur_dir, I64 fuf_flags, CDirEntry *parent=NULL)
+CDirEntry *EchFSFilesFind(U8 *files_find_mask, I64 fuf_flags, CDirEntry *parent=NULL)
 {/*This function creates a tree of directory Fs->cur_dir.
    CDirEntry* returned points to the first entry of a linked list describing the entries of Fs->cur_dir.
    $UL$->next$UL,0$ points to the next entry in the same dir.
@@ -673,7 +682,6 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, U8 *cur_dir, I64 fuf_flags, CDirE
 	CEchFSIdTable *id_tab;
 	CEchFSEntry entry;
 	U64 i, parent_id;
-	U16 attr;
 	CEchFSPathResult pres;
 	Bool unlock;
 
@@ -686,19 +694,45 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, U8 *cur_dir, I64 fuf_flags, CDirE
 
 		id_tab = drive->echfs_id_table;
 
-		if (parent == NULL)
+		if (!EchFSResolvePath(drive, &pres, Fs->cur_dir, ECHFS_TYPE_DIR, ECHFS_ROOT_DIR_ID) || pres.not_found)
 		{
-			if (!EchFSResolvePath(drive, &pres, cur_dir, ECHFS_TYPE_DIR, ECHFS_ROOT_DIR_ID) || pres.not_found)
-			{
-				if (unlock)
-					DriveUnlock(drive);
-				return NULL;
-			}
-			parent_id = pres.target.payload;
+			if (unlock)
+				DriveUnlock(drive);
+			return NULL;
 		}
-		else
-			parent_id = parent->clus;
 
+		parent_id = pres.target.payload;
+
+		if (pres.target.payload == ECHFS_ROOT_DIR_ID || fuf_flags & FUF_RECURSE)
+			goto no_dot_entries;
+
+		if (FilesFindMatch(".", files_find_mask, fuf_flags))
+		{
+			node = CAlloc(sizeof(CDirEntry));
+			node->attr = RS_ATTR_DIR;
+			node->clus = pres.target.payload;
+			StrCopy(node->name, ".");
+
+			node->full_name = FileNameAbs(".");
+
+			node->next = ret;
+			ret = node;
+		}
+
+		if (FilesFindMatch("..", files_find_mask, fuf_flags))
+		{
+			node = CAlloc(sizeof(CDirEntry));
+			node->attr = RS_ATTR_DIR;
+			node->clus = pres.parent.payload;
+			StrCopy(node->name, "..");
+
+			node->full_name = FileNameAbs("..");
+
+			node->next = ret;
+			ret = node;
+		}
+
+no_dot_entries:
 		for (i = 0; i < id_tab->dir_size * id_tab->dir_entries_per_block; i++) {
 			if (!EchFSReadEntry(drive, &entry, i) || !entry.parent_id) {
 				if (unlock)
@@ -706,34 +740,44 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, U8 *cur_dir, I64 fuf_flags, CDirE
 				return ret;
 			}
 
-			if (entry.parent_id == parent_id && FilesFindMatch(entry.name, files_find_mask, fuf_flags))
+			if (entry.parent_id == parent_id)
 			{
 				node = CAlloc(sizeof(CDirEntry));
-				attr = 0;
 
 				if (entry.type == ECHFS_TYPE_DIR)
-						attr |= RS_ATTR_DIR;
+						node->attr |= RS_ATTR_DIR;
 
 				MemCopy(node->name, entry.name, CDIR_FILENAME_LEN - 1);
 				node->name[CDIR_FILENAME_LEN-1] = 0;
 				node->clus = entry.payload;
 				node->size = entry.size;
-				node->attr = attr;
-
-				if (fuf_flags & FUf_RECURSE && attr & RS_ATTR_DIR)
-				{
-					node->full_name = DirNameAbs(entry.name);
-					Cd(entry.name);
-					node->sub = EchFSFilesFind(files_find_mask, fuf_flags, node);
-					Cd("..");
-				}
-				else
-					node->full_name = FileNameAbs(entry.name);
-
 				node->parent = parent;
 
-				node->next = ret;
-				ret = node;
+				if (fuf_flags & FUF_RECURSE && node->attr & RS_ATTR_DIR)
+				{
+					node->full_name = DirNameAbs(node->name);
+					if (Cd(node->name))
+					{
+						node->sub = EchFSFilesFind(files_find_mask, fuf_flags, node);
+						Cd("..");
+					}
+					node->next = ret;
+					ret = node;
+				}
+				else
+				{
+					node->full_name = FileNameAbs(entry.name);
+					if ((node->attr & RS_ATTR_DIR || !(fuf_flags & FUF_JUST_DIRS)) &&
+						FilesFindMatch(node->full_name, files_find_mask, fuf_flags))
+					{
+						node->next = ret;
+						ret = node;
+					}
+					else
+					{
+						DirEntryDel(node);
+					}
+				}
 			}
 		}
 		if (unlock)
@@ -787,7 +831,7 @@ Bool EchFSFileFind(CDrive *drive,I64 cur_dir_clus,U8 *filename, CDirEntry *_res,
 		}
 
 		if (pres.target.type == ECHFS_TYPE_DIR)
-				attr |= RS_ATTR_DIR;
+			attr |= RS_ATTR_DIR;
 
 		MemCopy(_res->name, pres.target.name, CDIR_FILENAME_LEN - 1);
 		_res->name[CDIR_FILENAME_LEN-1] = 0;

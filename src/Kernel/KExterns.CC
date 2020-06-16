@@ -95,7 +95,7 @@ extern Bool RedSeaValidate(U8 drv_let);
 
 extern U0 EchFSInit(CDrive *drive);
 extern Bool EchFSDirNew(CDrive *drive,U8 *cur_dir,CDirEntry *entry);
-extern CDirEntry *EchFSFilesFind(U8 *files_find_mask, U8 *cur_dir, I64 fuf_flags, CDirEntry *parent=NULL);
+extern CDirEntry *EchFSFilesFind(U8 *files_find_mask, I64 fuf_flags, CDirEntry *parent=NULL);
 extern Bool EchFSFileFind(CDrive *drive, I64 cur_dir_clus, U8 *filename, CDirEntry *_res, I64 fuf_flags=0);
 
 extern CTask *SpawnQueue(U0 (*fp_addr)(U8 *data),U8 *data=NULL,

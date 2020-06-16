@@ -31,7 +31,7 @@ export-fat32:
 	sudo mount `cat loopback_dev`p1 mnt
 	rm -rf src
 	mkdir src
-	sudo cp -rv mnt/* src/
+	sudo cp -r mnt/* src/
 	sudo sync
 	sudo umount mnt
 	sudo losetup -d `cat loopback_dev`
@@ -45,13 +45,13 @@ echfs:
 	echfs-utils -v -m -p0 ZenithOS.hdd quick-format 32768
 	mkdir -p mnt
 	echfs-fuse --mbr -p0 ZenithOS.hdd mnt
-	cp -rv src/* mnt/
+	cp -r src/* mnt/
 	sync
 	fusermount -u mnt
 	echfs-utils -v -m -p1 ZenithOS.hdd quick-format 32768
 	mkdir -p mnt
 	echfs-fuse --mbr -p1 ZenithOS.hdd mnt
-	cp -rv src/* mnt/
+	cp -r src/* mnt/
 	sync
 	fusermount -u mnt
 	rm -rf mnt
@@ -62,10 +62,11 @@ export-echfs:
 	echfs-fuse --mbr -p0 ZenithOS.hdd mnt
 	rm -rf src
 	mkdir src
-	cp -rv mnt/* src/
+	cp -r mnt/* src/
 	sync
 	fusermount -u mnt
 	rm -rf mnt
+	chmod -R 777 src
 
 run:
 	qemu-system-x86_64 -net none -m 2G -enable-kvm -cpu host -smp 4 -drive file=ZenithOS.hdd,format=raw
