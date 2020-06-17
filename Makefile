@@ -40,7 +40,7 @@ export-fat32:
 	rm loopback_dev
 	sudo chown -R $$USER:$$USER src
 
-echfs:
+echfs: qloader2
 	rm -f ZenithOS.hdd
 	dd if=/dev/zero bs=1024M count=0 seek=8 of=ZenithOS.hdd
 	fdisk ZenithOS.hdd < fdisk.script
