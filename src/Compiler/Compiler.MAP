@@ -20,7 +20,7 @@ $LK,"ParseStaticInit",A="FL:::/Compiler/ParseVar.CC,215",BI=17$
 $LK,"ICAndBranch",A="FL:::/Compiler/BackC.CC,1",BI=18$
 $LK,"ParseAsmInst",A="FL:::/Compiler/Asm.CC,486",BI=19$
 $LK,"U",A="FL:::/Compiler/UAsm.CC,653",BI=20$
-$LK,"comp_templates_dont_push",A="FL:::/Compiler/CExterns.CC,45"$
+$LK,"comp_templates_dont_push",A="FL:::/Compiler/CExterns.CC,40"$
 $LK,"LastFun",A="FL:::/Compiler/CMisc.CC,48"$
 $LK,"OptLead1",A="FL:::/Compiler/OptLib.CC,73",BI=21$
 $LK,"ICFConvert2",A="FL:::/Compiler/BackFA.CC,169",BI=22$
@@ -78,7 +78,7 @@ $LK,"CN_INST",A="FL:::/Compiler/BackFA.CC,3"$
 $LK,"CmdLinePrompt",A="FL:::/Compiler/CMisc.CC,127",BI=57$
 $LK,"ParseClassNew",A="FL:::/Compiler/ParseLib.CC,40",BI=58$
 $LK,"OptPass3",A="FL:::/Compiler/OptPass3.CC,1",BI=59$
-$LK,"comp_templates_dont_push2",A="FL:::/Compiler/CExterns.CC,44"$
+$LK,"comp_templates_dont_push2",A="FL:::/Compiler/CExterns.CC,39"$
 $LK,"OptPass4",A="FL:::/Compiler/OptPass4.CC,133",BI=60$
 $LK,"OptPass5",A="FL:::/Compiler/OptPass5.CC,1",BI=61$
 $LK,"OptPass6",A="FL:::/Compiler/OptPass6.CC,96",BI=62$
@@ -182,7 +182,7 @@ $LK,"OptLag1",A="FL:::/Compiler/OptLib.CC,51",BI=140$
 $LK,"OptLag2",A="FL:::/Compiler/OptLib.CC,62",BI=141$
 $LK,"StreamPrint",A="FL:::/Compiler/CMisc.CC,68",BI=142$
 $LK,"_LAST_FUN",A="FL:::/Compiler/CMisc.CC,12"$
-$LK,"comp_templates_dont_pop",A="FL:::/Compiler/CExterns.CC,43"$
+$LK,"comp_templates_dont_pop",A="FL:::/Compiler/CExterns.CC,38"$
 $LK,"StreamDir",A="FL:::/Compiler/CMisc.CC,82",BI=143$
 $LK,"LexStatement2Bin",A="FL:::/Compiler/CMain.CC,1",BI=144$
 $LK,"ICShift",A="FL:::/Compiler/BackA.CC,650",BI=145$
@@ -242,7 +242,7 @@ $LK,"ICOrOr",A="FL:::/Compiler/BackB.CC,49",BI=186$
 $LK,"LexExcept",A="FL:::/Compiler/CExcept.CC,81",BI=187$
 $LK,"INTERNAL_TYPES_NUM",A="FL:::/Compiler/CInit.CC,1"$
 $LK,"CompF2PushPop",A="FL:::/Compiler/OptLib.CC,542",BI=188$
-$LK,"comp_templates",A="FL:::/Compiler/CExterns.CC,42"$
+$LK,"comp_templates",A="FL:::/Compiler/CExterns.CC,37"$
 $LK,"CompFixUpAOTAsm",A="FL:::/Compiler/CMain.CC,302",BI=189$
 $LK,"LexCharGet",A="FL:::/Compiler/Lex.CC,107",BI=190$
 $LK,"CMP_TEMPLATES",A="FL:::/Compiler/Templates.CC,4"$
@@ -336,7 +336,7 @@ $LK,"ICToBool",A="FL:::/Compiler/BackB.CC,312",BI=260$
 $LK,"ParseAsmBlk",A="FL:::/Compiler/Asm.CC,1105",BI=261$
 $LK,"ParseAsmArg",A="FL:::/Compiler/Asm.CC,38",BI=262$
 $LK,"OptFixSizeOf",A="FL:::/Compiler/OptLib.CC,484",BI=263$
-$LK,"comp_templates_dont_push_pop",A="FL:::/Compiler/CExterns.CC,46"$
+$LK,"comp_templates_dont_push_pop",A="FL:::/Compiler/CExterns.CC,41"$
 $LK,"ParseAsmImm",A="FL:::/Compiler/Asm.CC,1",BI=264$
 $LK,"LexAttachDoc",A="FL:::/Compiler/Lex.CC,323",BI=265$
 $LK,"MODR_RIP_REL_IMM_U32",A="FL:::/Compiler/BackLib.CC,134"$
