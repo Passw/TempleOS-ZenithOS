@@ -42,7 +42,8 @@ StartOS.CC
 	AsmLib.CC
 	AsmResolve.CC
 	BackA.CC
-	CInit.CC
+	BackB.CC
+	CInit.CC
 	CompilerA.HH
 	CompilerB.HH
 
