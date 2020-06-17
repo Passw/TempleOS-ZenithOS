@@ -40,7 +40,8 @@ StartOS.CC
 	Asm.CC
 	AsmInit.CC
 	AsmLib.CC
-	AsmResolve.CC
+	AsmResolve.CC
+	BackA.CC
 	CompilerA.HH
 	CompilerB.HH
 
