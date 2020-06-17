@@ -38,7 +38,9 @@ StartOS.CC
 
 /Compiler/
 	Asm.CC
-	AsmInit.CC
+	AsmInit.CC
+	AsmLib.CC
+	AsmResolve.CC
 	CompilerA.HH
 	CompilerB.HH
 
