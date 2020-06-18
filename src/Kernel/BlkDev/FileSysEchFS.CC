@@ -232,10 +232,12 @@ Bool EchFSFindEmptyEntry(CDrive *drive, U64 *_free_entry, U64 *_free_dir_id)
 			return TRUE;
 		}
 
-		if (entry.parent_id == ECHFS_DELETED_ENTRY && !*_free_entry)
-			*_free_entry = i;
-		else if (entry.type == ECHFS_TYPE_DIR && entry.payload == *_free_dir_id)
-			(*_free_dir_id)++;
+		if (entry.parent_id == ECHFS_DELETED_ENTRY)
+			if (!*_free_entry)
+				*_free_entry = i;
+		else
+			if (entry.type == ECHFS_TYPE_DIR && entry.payload == *_free_dir_id)
+				(*_free_dir_id)++;
 	}
 	return FALSE;
 }
@@ -349,6 +351,8 @@ U0 EchFSInit(CDrive *drive)
 		drive->fs_type   = FSt_ECHFS;
 		drive->root_clus = -1;
 
+		drive->spc = drive->echfs_id_table->sectors_per_block(I64);
+
 		if (unlock)
 			DriveUnlock(drive);
 	}
@@ -373,6 +377,48 @@ Bool EchFSFreeBlockChain(CDrive *drive, U64 block)
 	}
 
 	return TRUE;
+}
+
+Bool EchFSAllocBlockChainContiguous(CDrive *drive, U64 *_block, U64 count)
+{
+	U64 fat_addr, cur_block, i, c;
+	CEchFSIdTable *id_tab;
+	Bool unlock;
+
+	if (!count)
+		return TRUE;
+
+	try
+	{
+		unlock = DriveLock(drive);
+
+		id_tab   = drive->echfs_id_table;
+		fat_addr = id_tab->fat_start * id_tab->bytes_per_block;
+
+		c = count;
+		for (i = 0; i < id_tab->block_count; i++)
+		{
+			EchFSBlkDevRead(drive, &cur_block, fat_addr + i * sizeof(U64), sizeof(U64));
+			if (!cur_block && !--c)
+			{
+				*_block = i - count + 1;
+				if (unlock)
+					DriveUnlock(drive);
+				return TRUE;
+			}
+			else
+			{
+				c = count;
+			}
+		}
+
+		if (unlock)
+			DriveUnlock(drive);
+	}
+	catch
+		if (unlock)
+			DriveUnlock(drive);
+	return FALSE;
 }
 
 Bool EchFSAllocBlockChain(CDrive *drive, U64 *_block, U64 count)
@@ -434,12 +480,12 @@ I64 EchFSFilesDel(CDrive *drive, U8 *cur_dir, U8 *files_find_mask, I64 fuf_flags
 
 		id_tab = drive->echfs_id_table;
 
-		saved_cur_dir = MAlloc(StrLen(Fs->cur_dir));
+		saved_cur_dir = MAlloc(StrLen(Fs->cur_dir) + 1);
 		StrCopy(saved_cur_dir, Fs->cur_dir);
 
-		Cd(cur_dir);
+		StrCopy(Fs->cur_dir, cur_dir);
 		tree = EchFSFilesFind(files_find_mask, fuf_flags & ~FUF_RECURSE);
-		Cd(saved_cur_dir);
+		StrCopy(Fs->cur_dir, saved_cur_dir);
 
 		Free(saved_cur_dir);
 
@@ -476,11 +522,11 @@ continue:
 			else
 				break;
 		}
-		LinkedListDel(tree);
+		DirTreeDel(tree);
 	}
 	catch
 		if (tree)
-			LinkedListDel(tree);
+			DirTreeDel(tree);
 unlock_and_quit:
 	if (unlock_break)
 		BreakUnlock;
@@ -734,7 +780,8 @@ CDirEntry *EchFSFilesFind(U8 *files_find_mask, I64 fuf_flags, CDirEntry *parent=
 
 no_dot_entries:
 		for (i = 0; i < id_tab->dir_size * id_tab->dir_entries_per_block; i++) {
-			if (!EchFSReadEntry(drive, &entry, i) || !entry.parent_id) {
+			if (!EchFSReadEntry(drive, &entry, i) || !entry.parent_id)
+			{
 				if (unlock)
 					DriveUnlock(drive);
 				return ret;
@@ -745,7 +792,7 @@ no_dot_entries:
 				node = CAlloc(sizeof(CDirEntry));
 
 				if (entry.type == ECHFS_TYPE_DIR)
-						node->attr |= RS_ATTR_DIR;
+					node->attr |= RS_ATTR_DIR;
 
 				MemCopy(node->name, entry.name, CDIR_FILENAME_LEN - 1);
 				node->name[CDIR_FILENAME_LEN-1] = 0;
@@ -788,7 +835,7 @@ no_dot_entries:
 			DriveUnlock(drive);
 }
 
-Bool EchFSFileFind(CDrive *drive,I64 cur_dir_clus,U8 *filename, CDirEntry *_res,I64 fuf_flags=0)
+Bool EchFSFileFind(CDrive *drive, I64 cur_dir_clus, U8 *filename, CDirEntry *_res, I64 fuf_flags=0)
 {
 	U8 name[CDIR_FILENAME_LEN];
 	CEchFSPathResult pres;

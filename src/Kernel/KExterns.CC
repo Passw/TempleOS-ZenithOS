@@ -97,6 +97,10 @@ extern U0 EchFSInit(CDrive *drive);
 extern Bool EchFSDirNew(CDrive *drive,U8 *cur_dir,CDirEntry *entry);
 extern CDirEntry *EchFSFilesFind(U8 *files_find_mask, I64 fuf_flags, CDirEntry *parent=NULL);
 extern Bool EchFSFileFind(CDrive *drive, I64 cur_dir_clus, U8 *filename, CDirEntry *_res, I64 fuf_flags=0);
+extern Bool EchFSAllocBlockChain(CDrive *drive, U64 *_block, U64 count);
+extern Bool EchFSAllocBlockChainContiguous(CDrive *drive, U64 *_block, U64 count);
+extern Bool EchFSBlkDevWrite(CDrive *drive, U8 *buffer, U64 loc, U64 count);
+extern Bool EchFSBlkDevRead(CDrive *drive, U8 *buffer, U64 loc, U64 count);
 
 extern CTask *SpawnQueue(U0 (*fp_addr)(U8 *data),U8 *data=NULL,
 		U8 *task_name=NULL,I64 target_cpu,CTask *parent=NULL, //NULL means zenith

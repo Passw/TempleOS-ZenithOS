@@ -1,6 +1,7 @@
 .PHONY: fat32 export-fat32 echfs export-echfs run
 
 fat32: qloader2
+	rm -f ZenithOS.hdd
 	dd if=/dev/zero bs=1024M count=0 seek=8 of=ZenithOS.hdd
 	parted -s ZenithOS.hdd mklabel msdos
 	parted -s ZenithOS.hdd mkpart primary fat32 1 50%
@@ -40,6 +41,7 @@ export-fat32:
 	sudo chown -R $$USER:$$USER src
 
 echfs:
+	rm -f ZenithOS.hdd
 	dd if=/dev/zero bs=1024M count=0 seek=8 of=ZenithOS.hdd
 	fdisk ZenithOS.hdd < fdisk.script
 	echfs-utils -v -m -p0 ZenithOS.hdd quick-format 32768
