@@ -53,7 +53,8 @@ I64 HashEntrySize2(CHashSrcSym *tmph)
 			if (debug_info = tmph->debug_info)
 //This should be $LK,"MSize",A="MN:MSize"$() but it would crash on AOT .BIN file funs.
 				res += debug_info->body[debug_info->max_line + 1 - debug_info->min_line] - debug_info->body[0];
-		} else if (tmph->type & HTT_DEFINE_STR)
+		}
+		else if (tmph->type & HTT_DEFINE_STR)
 			res += MSize2(tmph(CHashDefineStr *)->data);
 		else if (tmph->type & HTT_GLOBAL_VAR)
 		{
