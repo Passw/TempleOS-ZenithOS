@@ -46,7 +46,7 @@ StartOS.CC
 	BackC.CC
 	BackFA.CC
 	BackFB.CC
-
+	BackLib.CC
 	CExcept.CC
 	CExterns.CC
 	CHash.CC
@@ -56,7 +56,7 @@ StartOS.CC
 
 	LexLib.CC
 
-	CompilerA.HH
+	CompilerA.HH
 	CompilerB.HH
 
 /Kernel/
