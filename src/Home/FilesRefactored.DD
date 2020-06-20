@@ -45,9 +45,10 @@ StartOS.CC
 	BackB.CC
 	BackC.CC
 	BackFA.CC
-	BackFB.CC
+	BackFB.CC
 	CExcept.CC
 	CExterns.CC
+	CHash.CC
 	CInit.CC
 	CompilerA.HH
 	CompilerB.HH
