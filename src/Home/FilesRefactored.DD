@@ -46,12 +46,12 @@ StartOS.CC
 	BackC.CC
 	BackFA.CC
 	BackFB.CC
-	BackLib.CC
+	BackLib.CC
 	CExcept.CC
 	CExterns.CC
 	CHash.CC
 	CInit.CC
-
+	CMain.CC
 	CMisc.CC
 
 	LexLib.CC
