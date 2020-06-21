@@ -53,11 +53,14 @@ StartOS.CC
 	CInit.CC
 	CMain.CC
 	CMisc.CC
-	Lex.CC
+	Lex.CC
 	LexLib.CC
+	OptLib.CC
 
+	OpCodes.DD
 	CompilerA.HH
 	CompilerB.HH
+	Compiler.PRJ
 
 /Kernel/
 	KStart64.CC
