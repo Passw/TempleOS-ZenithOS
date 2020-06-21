@@ -351,6 +351,7 @@ U0 EchFSInit(CDrive *drive)
 		drive->fs_type   = FSt_ECHFS;
 		drive->root_clus = -1;
 
+		drive->data_area = drive->drv_offset;
 		drive->spc = drive->echfs_id_table->sectors_per_block(I64);
 
 		if (unlock)

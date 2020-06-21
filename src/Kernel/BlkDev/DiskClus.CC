@@ -1,14 +1,18 @@
 I64 ClusNumNext(CDrive *drive,I64 c,I64 count=1)
 {//Return next count'th clus in chain.
 	Bool unlock;
+	U64 fat_addr;
 	DriveCheck(drive);
 	if (count<=0) return c;
 	try {
 		unlock=DriveLock(drive);
 		switch (drive->fs_type) {
 			case FSt_ECHFS:
-				RawPrint(3000, "echfs: In ClusNumGet\n");
-				while (1) {}
+				fat_addr = drive->echfs_id_table->fat_start * drive->echfs_id_table->bytes_per_block;
+				while (count-- > 0 && c != 0xFFFFFFFFFFFFFFFF)
+					EchFSBlkDevRead(drive, &c, fat_addr + c * sizeof(U64), sizeof(U64));
+				if (c == 0xFFFFFFFFFFFFFFFF)
+					c = INVALID_CLUS;
 				break;
 			case FSt_REDSEA:
 				c+=count;
@@ -36,11 +40,10 @@ I64 Clus2Blk(CDrive *drive,I64 c)
 {//Drive clus num to blk num.
 	DriveCheck(drive);
 	switch (drive->fs_type) {
-		case FSt_ECHFS:
-            return -1;
 		case FSt_REDSEA:
 			return c;
 		case FSt_FAT32:
+		case FSt_ECHFS:
 			return drive->data_area+c*drive->spc;
 		default:
 			throw('Drive');
@@ -51,33 +54,27 @@ I64 ClusBlkRead(CDrive *drive,U8 *buf,I64 c,I64 blks)
 {//Accepts blk count, so padding on last clus is not read.
 	I64 i;
 	Bool unlock;
-	U64 *block_chain, fat_addr;
 	DriveCheck(drive);
 	if (blks<=0) return c;
 	try {
 		unlock=DriveLock(drive);
 		switch (drive->fs_type) {
-			case FSt_ECHFS:
-				fat_addr = drive->echfs_id_table->fat_start * drive->echfs_id_table->bytes_per_block;
-				block_chain = MAlloc((blks + 1) * sizeof(U64));
-				block_chain[0] = c(U64);
-				for (i = 1; i < blks + 1; i++) {
-					if (block_chain[i-1] == 0xffffffffffffffff)
-						break;
-					EchFSBlkDevRead(drive, &block_chain[i], fat_addr + block_chain[i-1] * sizeof(U64), sizeof(U64));
-				}
-				for (i = 0; i < blks; i++) {
-					if (block_chain[i] == 0xffffffffffffffff)
-						break;
-					EchFSBlkDevRead(drive, buf, block_chain[i] * drive->echfs_id_table->bytes_per_block, drive->echfs_id_table->bytes_per_block);
-					buf += drive->echfs_id_table->bytes_per_block;
-				}
-				c = block_chain[i];
-				Free(block_chain);
-				break;
 			case FSt_REDSEA:
 				BlkRead(drive,buf,c,blks);
 				c+=blks;
+				break;
+			case FSt_ECHFS:
+				while (blks && c != 0xFFFFFFFFFFFFFFFF) {
+					i=blks;
+					if (i>drive->spc)
+						i=drive->spc;
+					BlkRead(drive,buf,drive->data_area+c*drive->spc,i);
+					buf += i * drive->spc;
+					c=ClusNumNext(drive,c,1);
+					blks-=i;
+				}
+				if (blks)
+					throw('Drive');
 				break;
 			case FSt_FAT32:
 				while (blks && 0<c<0x0FFFFFF8) {
@@ -112,33 +109,27 @@ I64 ClusBlkWrite(CDrive *drive,U8 *buf,I64 c,I64 blks)
 {//Accepts blk count, so padding on last clus is not written.
 	I64 i;
 	Bool unlock;
-	U64 *block_chain, fat_addr;
 	DriveCheck(drive);
 	if (blks<=0) return c;
 	try {
 		unlock=DriveLock(drive);
 		switch (drive->fs_type) {
-			case FSt_ECHFS:
-				fat_addr = drive->echfs_id_table->fat_start * drive->echfs_id_table->bytes_per_block;
-				block_chain = MAlloc((blks + 1) * sizeof(U64));
-				block_chain[0] = c(U64);
-				for (i = 1; i < blks + 1; i++) {
-					if (block_chain[i-1] == 0xffffffffffffffff)
-						break;
-					EchFSBlkDevRead(drive, &block_chain[i], fat_addr + block_chain[i-1] * sizeof(U64), sizeof(U64));
-				}
-				for (i = 0; i < blks; i++) {
-					if (block_chain[i] == 0xffffffffffffffff)
-						break;
-					EchFSBlkDevWrite(drive, buf, block_chain[i] * drive->echfs_id_table->bytes_per_block, drive->echfs_id_table->bytes_per_block);
-					buf += drive->echfs_id_table->bytes_per_block;
-				}
-				c = block_chain[i];
-				Free(block_chain);
-				break;
 			case FSt_REDSEA:
 				BlkWrite(drive,buf,c,blks);
 				c=0;
+				break;
+			case FSt_ECHFS:
+				while (blks) {
+					if (c == 0xFFFFFFFFFFFFFFFF)
+						throw('Drive');
+					i=blks;
+					if (i>drive->spc)
+						i=drive->spc;
+					BlkWrite(drive,buf,drive->data_area+c*drive->spc,i);
+					buf += i * drive->spc;
+					c=ClusNumNext(drive,c);
+					blks-=i;
+				}
 				break;
 			case FSt_FAT32:
 				while (blks) {
