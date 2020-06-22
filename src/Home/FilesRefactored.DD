@@ -58,13 +58,13 @@ StartOS.CC
 	OptLib.CC
 	OptPass012.CC
 	OptPass3.CC
-
+	OptPass4.CC
 	OptPass5.CC
 	OptPass6.CC
 
 	ParseLib.CC
 
-	Templates.CC
+	Templates.CC
 
 	OpCodes.DD
 	CompilerA.HH
