@@ -4111,6 +4111,10 @@ public class CCPU //The Gs segment reg points to current CCPU.
 #help_index "Real Mode"
 class CRMRegs
 {
+	U16 gs,
+		fs,
+		es,
+		ds;
 	U32 eflags,
 		ebp,
 		edi,

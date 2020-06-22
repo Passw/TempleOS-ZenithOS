@@ -31,7 +31,7 @@ _REALMODEINT::
 
 		MOV RSI, U64 SF_ARG3[RBP]  // Copy in_regs to @@70
 		MOV RDI, @@70
-		MOV ECX, 8
+		MOV ECX, 10
 		REP_MOVSD
 
 		CLI
@@ -75,7 +75,7 @@ _REALMODEINT::
 
 		MOV RCX, 0xC0000101 // Store GS base
 		RDMSR
-		MOV U32 [@@65], EAX
+		MOV U32 [@@65], EAX
 		MOV U32 [@@66], EDX
 
 		SGDT U64 [@@10]		// Save GDT and IDT for later
@@ -111,14 +111,14 @@ _REALMODEINT::
 
 @@02:
 		XOR AX, AX
-		MOV DS, AX
-		MOV ES, AX
-		MOV FS, AX
-		MOV GS, AX
 		MOV SS, AX
 
 		// Read up register state from in_regs
 		MOV ESP, U32 @@70
+		POP GS
+		POP FS
+		POP ES
+		POP DS
 		POPFD
 		POP EBP
 		POP EDI
@@ -145,7 +145,7 @@ _REALMODEINT::
 
 		// Save out register state to out_regs
 		MOV ESP, U32 @@70
-		ADD ESP, 8 * 4
+		ADD ESP, 10 * 4
 		PUSH EAX
 		PUSH EBX
 		PUSH ECX
@@ -154,6 +154,13 @@ _REALMODEINT::
 		PUSH EDI
 		PUSH EBP
 		PUSHFD
+		PUSH DS
+		PUSH ES
+		PUSH FS
+		PUSH GS
+
+		XOR AX, AX
+		MOV DS, AX
 
 		LGDT U32 [@@10]
 
@@ -226,7 +233,7 @@ _REALMODEINT::
 		// Save register state to out_regs from @@70
 		MOV RSI, @@70
 		MOV RDI, U64 SF_ARG2[RBP]
-		MOV RCX, 8
+		MOV RCX, 10
 		REP_MOVSD
 
 		POP R15
@@ -274,7 +281,8 @@ ALIGN 8,OC_NOP
 @@65:	DU32 0;
 @@66:	DU32 0;
 
-@@70:	DU32 0,0,0,0,0,0,0,0;
+@@70:	DU16 0,0,0,0;
+		DU32 0,0,0,0,0,0,0,0;
 
 @@100:	DU64 0;
 
@@ -284,4 +292,3 @@ ALIGN 8,OC_NOP
 };
 
 _extern _REALMODEINT U0 RealModeInt(U8 int, CRMRegs *regs_in, CRMRegs *regs_out); //Drop to real mode to perform a BIOS call.
-
