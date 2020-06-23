@@ -62,8 +62,9 @@ StartOS.CC
 	OptPass5.CC
 	OptPass6.CC
 	OptPass789A.CC
-	ParseExp.CC
+	ParseExp.CC
 	ParseLib.CC
+	ParseStatement.CC
 
 	Templates.CC
 
