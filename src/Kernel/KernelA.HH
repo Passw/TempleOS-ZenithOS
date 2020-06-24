@@ -2712,6 +2712,28 @@ public class CATARep
 			 irq;
 };
 
+#help_index "Devices;Disk/Int13h"
+class CInt13hDAP
+{
+	U16 size;
+	U16 count;
+	U16 off;
+	U16 seg;
+	U64 lba;
+};
+
+class CInt13hParams
+{
+	U16 struct_size;
+	U16 info_flags;
+	U32 chs_cyls;
+	U32 chs_heads;
+	U32 chs_sects;
+	U64 sector_count;
+	U16 bytes_per_sect;
+	U32 edd_config;
+};
+
 #help_index "Devices;Disk/AHCI"
 #define AHCI_MAX_PORTS			32
 
@@ -3268,7 +3290,8 @@ public class CDirEntry
 #define BDT_ISO_FILE_READ 		3
 #define BDT_ISO_FILE_WRITE		4
 #define BDT_ATAPI 				5
-#define BDT_TYPES_NUM 			6
+#define BDT_INT13H				6
+#define BDT_TYPES_NUM 			7
 
 #define BDf_REMOVABLE 			0
 #define BDf_INITIALIZED 		1
@@ -3308,7 +3331,8 @@ public class CBlkDev
 			 unit,
 			 pad[2],
 			*RAM_disk,
-			*file_disk_name;
+			*file_disk_name,
+			 bios_drive;
 	CFile	*file_disk;
 	U32 	 bd_signature,
 			 type,
@@ -3419,6 +3443,7 @@ public class CBlkDevGlobals
 			   *home_dir,
 			    boot_drive_let,
 				first_hd_drive_let,
+				first_int13h_drive_let,
 			    first_dvd_drive_let;
 	CCacheBlk  *cache_base,
 			   *cache_ctrl,
@@ -4113,7 +4138,7 @@ class CRMRegs
 {
 	U16 gs,
 		fs,
-		es,
+		es,
 		ds;
 	U32 eflags,
 		ebp,

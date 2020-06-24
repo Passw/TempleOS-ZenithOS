@@ -51,7 +51,7 @@ I64 BlkDevAdd(CBlkDev *bd, I64 prt_num=I64_MIN, Bool whole_drive, Bool make_free
 			drive->drive_signature = DRIVE_SIGNATURE_VAL;
 			drive->prt_num = num;
 			drive->fs_type = FSt_REDSEA;
-//This is to force creation of a RAM
+			//This is to force creation of a RAM
 			//drive during boot, so it is probably
 			//MAlloced to the same addr and can
 			//be assumed to be already formatted.
@@ -65,10 +65,12 @@ I64 BlkDevAdd(CBlkDev *bd, I64 prt_num=I64_MIN, Bool whole_drive, Bool make_free
 			break;
 		case BDT_ATA:
 			drive->drive_signature = DRIVE_SIGNATURE_VAL; //Temporarily validate
-			if (!BlkDevInit(bd))
+			if (!BlkDevInit(bd)) {
 				drive->drive_signature = 0; //Revoke validation
-			else
-			{
+				break;
+			}
+			//FALLTHRU
+		case BDT_INT13H:
 				drive->drive_signature = 0; //Revoke validation
 				if (whole_drive)
 				{
@@ -77,16 +79,25 @@ I64 BlkDevAdd(CBlkDev *bd, I64 prt_num=I64_MIN, Bool whole_drive, Bool make_free
 					res++;
 					drive->fs_type = FSt_REDSEA;
 					drive->size = bd->max_blk + 1 - bd->drv_offset;
-//The following read is a test read.
+					//The following read is a test read.
 					//if it hangs, the drive is not supported.
-					ATAReadBlks(bd, &mbr, 0, 1);
+					if (bd->type == BDT_ATA)
+						ATAReadBlks(bd, &mbr, 0, 1);
 					break;
 				}
 				offset = 0;
 				ext_base = INVALID_CLUS;
 				while (prt_num < 0 || num <= prt_num)
 				{
-					ATAReadBlks(bd, &mbr, offset, 1);
+					switch (bd->type)
+					{
+						case BDT_ATA:
+							ATAReadBlks(bd, &mbr, offset, 1);
+							break;
+						case BDT_INT13H:
+							Int13hReadBlksFromBlkDev(bd, &mbr, offset, 1);
+							break;
+					}
 					if (mbr.signature != 0xAA55)
 						break;
 					j = -1;
@@ -171,7 +182,6 @@ I64 BlkDevAdd(CBlkDev *bd, I64 prt_num=I64_MIN, Bool whole_drive, Bool make_free
 					else
 						offset = mbr.p[j].offset + ext_base;
 				}
-			}
 			break;
 		case BDT_ATAPI:
 			drive->drive_signature = DRIVE_SIGNATURE_VAL;
@@ -240,7 +250,7 @@ Bool GetBaseUnit(CBlkDev *bd)
 				while (!('0' <= ch <= '1'));
 				'' ch;
 				bd->unit = ch - '0';
-				'\n\n';
+				'\n\n';
 				blkdev.dvd_boot_is_good = BootDVDProbe(bd);
 			}
 		}
@@ -258,7 +268,10 @@ U0 BlkDevsInitAll()
 		blkdev.let_to_drive[i] = &blkdev.drvs[i];
 	#exe {
 		if (kernel_config->opts[CONFIG_MOUNT_IDE_AUTO])
+		{
 			StreamPrint("MountIDEAuto;");
+			StreamPrint("MountInt13hAuto;");
+		}
 		StreamPrint("#exe {Option(OPTf_WARN_PAREN, OFF);}");
 		StreamDoc(kernel_config->add_dev);
 		StreamPrint("#exe {Option(OPTf_WARN_PAREN, ON);}");

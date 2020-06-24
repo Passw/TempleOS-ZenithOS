@@ -4,6 +4,7 @@
 #include "DiskATA"
 #include "DiskATAId"
 #include "DiskBlkDev"
+#include "DiskInt13h"
 #include "DiskDrive"
 #include "DiskBlk"
 #include "DiskClus"

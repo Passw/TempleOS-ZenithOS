@@ -99,6 +99,7 @@ Bool BlkDevInit(CBlkDev *bd)
 				res = TRUE;
 				break;
 			case BDT_ATA:
+			case BDT_INT13H:
 				bd->max_reads = 128;
 				bd->max_writes = 1;
 				res = ATAInit(bd);
@@ -206,3 +207,4 @@ CBlkDev *Letter2BlkDev(U8 drv_let=0, Bool except=TRUE)
 	else
 		return NULL;
 }
+

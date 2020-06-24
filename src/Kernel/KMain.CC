@@ -16,9 +16,12 @@ U0 SysGlobalsInit()
 	#exe {
 		if (!kernel_config->mount_ide_auto_hd_let)
 			kernel_config->mount_ide_auto_hd_let='C';
+		if (!kernel_config->mount_int13h_auto_let)
+			kernel_config->mount_int13h_auto_let='H';
 		if (!kernel_config->mount_ide_auto_cd_let)
-			kernel_config->mount_ide_auto_cd_let='T';
+			kernel_config->mount_ide_auto_cd_let='T';
 		StreamPrint("blkdev.first_hd_drive_let=%d;", kernel_config->mount_ide_auto_hd_let);
+		StreamPrint("blkdev.first_int13h_drive_let=%d;", kernel_config->mount_int13h_auto_let);
 		StreamPrint("blkdev.first_dvd_drive_let=%d;", kernel_config->mount_ide_auto_cd_let);
 	}
 

@@ -63,6 +63,9 @@ Bool BlkRead(CDrive *drive, U8 *buf, I64 blk, I64 count)
 				case BDT_ATAPI:
 					res = ATARBlks(drive, buf, blk, count);
 					break;
+				case BDT_INT13H:
+					res = Int13hReadBlksFromDrive(drive, buf, blk, count);
+					break;
 			}
 			bd->last_time = tS;
 			if (bd->flags & BDF_READ_CACHE)

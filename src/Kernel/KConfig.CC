@@ -22,7 +22,7 @@ class CKConfig
 	U8		*home_dir;
 	U16		screen_width, screen_height;
 	Bool	opts[CONFIG_OPTIONS_NUM];
-	U8		mem_init_val, heap_init_val, var_init_val, boot_drive_let, mount_ide_auto_hd_let, mount_ide_auto_cd_let;
+	U8		mem_init_val, heap_init_val, var_init_val, boot_drive_let, mount_ide_auto_hd_let, mount_ide_auto_cd_let, mount_int13h_auto_let;
 };
 
 CDoc *KConfigAddDev(CKConfig *c)

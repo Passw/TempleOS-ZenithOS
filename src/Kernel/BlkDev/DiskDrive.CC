@@ -148,7 +148,7 @@ CDrive *DriveCheck(CDrive *drive,Bool except=TRUE)
 		if (except)
 			throw('Drive');
 		else
-			return NULL;
+			return NULL;
 	} else
 		return drive;
 }
@@ -177,8 +177,10 @@ I64 Letter2BlkDevType(U8 drv_let)
 	drv_let=Letter2Letter(drv_let);
 	if ('A'<=drv_let<='B')
 		return BDT_RAM;
-	if ('C'<=drv_let<='L')
+	if ('C'<=drv_let<='G')
 		return BDT_ATA;
+	if ('H'<=drv_let<='L')
+		return BDT_INT13H;
 	if ('M'<=drv_let<='P')
 		return BDT_ISO_FILE_READ;
 	if ('Q'<=drv_let<='S')
@@ -319,7 +321,7 @@ U8 *DriveModelNum(U8 drv_let=0)
 	return res;
 }
 
-U8 blkdev_text_attr[BDT_TYPES_NUM]={BLACK,LTCYAN,WHITE,LTGREEN,LTRED,LTBLUE};
+U8 blkdev_text_attr[BDT_TYPES_NUM]={BLACK,LTCYAN,WHITE,LTGREEN,LTRED,LTBLUE,LTPURPLE};
 U8 drv_text_attr[3]={BLACK,BLUE,RED};
 
 U8 DriveTextAttrGet(U8 drv_let=0)
