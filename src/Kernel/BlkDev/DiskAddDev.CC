@@ -95,7 +95,7 @@ I64 BlkDevAdd(CBlkDev *bd, I64 prt_num=I64_MIN, Bool whole_drive, Bool make_free
 							ATAReadBlks(bd, &mbr, offset, 1);
 							break;
 						case BDT_INT13H:
-							Int13hReadBlksFromBlkDev(bd, &mbr, offset, 1);
+							Int13hTransferBlksFromBlkDev(bd, &mbr, offset, 1, FALSE);
 							break;
 					}
 					if (mbr.signature != 0xAA55)

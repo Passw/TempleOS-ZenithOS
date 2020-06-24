@@ -37,17 +37,19 @@ continue:
 	}
 }
 
-Bool Int13hReadBlk(U64 drive, U8 *buf, U64 block)
+Bool Int13hTransferBlk(U64 drive, U8 *buf, U64 block, Bool write)
 {
 	U8 *tmp;
 	CInt13hDAP *dap;
 	CRMRegs r;
-
+
 	MemSet(&r, 0, sizeof(CRMRegs));
 
 	dap = BAlloc(sizeof(CInt13hDAP), 16);
 
 	tmp = BAlloc(BLK_SIZE, 16);
+	if (write)
+		MemCopy(tmp, buf, BLK_SIZE);
 
 	dap->size  = 16;
 	dap->count = 1;
@@ -55,7 +57,10 @@ Bool Int13hReadBlk(U64 drive, U8 *buf, U64 block)
 	dap->seg   = 0;
 	dap->lba   = block;
 
-	r.eax = 0x4200;
+	if (write)
+		r.eax = 0x4300;
+	else
+		r.eax = 0x4200;
 	r.edx = drive;
 	r.esi = dap(U32);
 
@@ -67,14 +72,15 @@ Bool Int13hReadBlk(U64 drive, U8 *buf, U64 block)
 		return FALSE;
 	}
 
-	MemCopy(buf, tmp, BLK_SIZE);
+	if (!write)
+		MemCopy(buf, tmp, BLK_SIZE);
 
 	BFree(BLK_SIZE + sizeof(CInt13hDAP));
 
 	return TRUE;
 }
 
-Bool Int13hReadBlksFromBlkDev(CBlkDev *bd, U8 *buf, U64 start_blk, U64 count) {
+Bool Int13hTransferBlksFromBlkDev(CBlkDev *bd, U8 *buf, U64 start_blk, U64 count, Bool write) {
 	Bool unlock;
 	U64 bios_drive;
 
@@ -84,7 +90,7 @@ Bool Int13hReadBlksFromBlkDev(CBlkDev *bd, U8 *buf, U64 start_blk, U64 count) {
 
 	while (count-- > 0)
 	{
-		if (Int13hReadBlk(bios_drive, buf, start_blk++) == FALSE) {
+		if (Int13hTransferBlk(bios_drive, buf, start_blk++, write) == FALSE) {
 			if (unlock)
 				BlkDevUnlock(bd);
 			throw('Int13h');
@@ -100,7 +106,7 @@ Bool Int13hReadBlksFromBlkDev(CBlkDev *bd, U8 *buf, U64 start_blk, U64 count) {
 
 }
 
-Bool Int13hReadBlksFromDrive(CDrive *drive, U8 *buf, U64 start_blk, U64 count) {
-	return Int13hReadBlksFromBlkDev(drive->bd, buf, start_blk, count);
+Bool Int13hTransferBlksFromDrive(CDrive *drive, U8 *buf, U64 start_blk, U64 count, Bool write) {
+	return Int13hTransferBlksFromBlkDev(drive->bd, buf, start_blk, count, write);
 
-}
+}

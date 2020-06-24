@@ -64,7 +64,7 @@ Bool BlkRead(CDrive *drive, U8 *buf, I64 blk, I64 count)
 					res = ATARBlks(drive, buf, blk, count);
 					break;
 				case BDT_INT13H:
-					res = Int13hReadBlksFromDrive(drive, buf, blk, count);
+					res = Int13hTransferBlksFromDrive(drive, buf, blk, count, FALSE);
 					break;
 			}
 			bd->last_time = tS;
@@ -110,6 +110,9 @@ Bool BlkWrite(CDrive *drive, U8 *buf, I64 blk, I64 count)
 				case BDT_ATAPI:
 					res = ATAWBlks(drive, buf, blk, count);
 					break;
+				case BDT_INT13H:
+					res = Int13hTransferBlksFromDrive(drive, buf, blk, count, TRUE);
+					break;
 			}
 			bd->last_time = tS;
 			if (bd->flags & BDF_READ_CACHE)
@@ -123,3 +126,4 @@ Bool BlkWrite(CDrive *drive, U8 *buf, I64 blk, I64 count)
 			DriveUnlock(drive);
 	return res;
 }
+
