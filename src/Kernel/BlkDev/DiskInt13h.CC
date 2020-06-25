@@ -30,7 +30,7 @@ U0 MountInt13hAuto()
 		blk = BlkDevNextFreeSlot(blkdev.first_int13h_drive_let, BDT_INT13H);
 		blk->bios_drive = cur_drive;
 		blk->max_blk = params->sector_count - 1;
-		BlkDevAdd(blk, , FALSE, FALSE);
+		BlkDevAdd(blk,, FALSE, FALSE);
 
 continue:
 		BFree(sizeof(CInt13hParams));
@@ -80,7 +80,8 @@ Bool Int13hTransferBlk(U64 drive, U8 *buf, U64 block, Bool write)
 	return TRUE;
 }
 
-Bool Int13hTransferBlksFromBlkDev(CBlkDev *bd, U8 *buf, U64 start_blk, U64 count, Bool write) {
+Bool Int13hTransferBlksFromBlkDev(CBlkDev *bd, U8 *buf, U64 start_blk, U64 count, Bool write)
+{
 	Bool unlock;
 	U64 bios_drive;
 
@@ -90,7 +91,8 @@ Bool Int13hTransferBlksFromBlkDev(CBlkDev *bd, U8 *buf, U64 start_blk, U64 count
 
 	while (count-- > 0)
 	{
-		if (Int13hTransferBlk(bios_drive, buf, start_blk++, write) == FALSE) {
+		if (Int13hTransferBlk(bios_drive, buf, start_blk++, write) == FALSE)
+		{
 			if (unlock)
 				BlkDevUnlock(bd);
 			throw('Int13h');
@@ -106,7 +108,8 @@ Bool Int13hTransferBlksFromBlkDev(CBlkDev *bd, U8 *buf, U64 start_blk, U64 count
 
 }
 
-Bool Int13hTransferBlksFromDrive(CDrive *drive, U8 *buf, U64 start_blk, U64 count, Bool write) {
+Bool Int13hTransferBlksFromDrive(CDrive *drive, U8 *buf, U64 start_blk, U64 count, Bool write)
+{
 	return Int13hTransferBlksFromBlkDev(drive->bd, buf, start_blk, count, write);
 
-}
+}
