@@ -1,5 +1,5 @@
 <a href="https://discord.gg/kkNuhNn"><img alt="Discord" src="https://img.shields.io/discord/661062825027829770?style=flat-square"></a>
-![Website](https://img.shields.io/website?down_color=lightgray&down_message=offline&style=flat-square&up_color=green&up_message=online&url=http%3A%2F%2Fzenithos.org)
+![Website](https://img.shields.io/website?down_color=lightgray&down_message=offline&style=flat-square&up_color=green&up_message=online&url=https%3A%2F%2Fzenithos.org)
 ![goto counter](https://img.shields.io/github/search/VoidNV/ZenithOS/goto?style=flat-square)
 # ZenithOS
 
@@ -17,9 +17,9 @@ Features in development include:
 
 ## Getting started
 
-See the [Releases](https://github.com/VoidNV/ZenithOS/releases) page for the latest stable release.
+See the [Releases](https://github.com/VoidNV/ZenithOS/releases) page for the latest stable release. As ZenithOS is in heavy development the last release may be quite behind from master. Alternatively, you can do the following and build an ISO from inside the OS, export it, and use that.
 
-The source code and binary files for ZenithOS can be found in the `src/` directory, and are assembled into a `ZenithOS.hdd` file by running `make_img.sh`. After this, set up a VM and select `ZenithOS.hdd` as the hard disk image, then boot up the VM.
+The source code and binary files for ZenithOS can be found in the `src/` directory, and are assembled into a `ZenithOS.hdd` disk image by running `make` for a fat32 disk or `make echfs` for an echfs disk. After this, you can do `make run` to run the image in QEMU, or more preferably, set up a VM in VirtualBox or VMWare, select `ZenithOS.hdd` as the hard disk image, and boot the VM.
 
 ### Contributing
 
@@ -27,7 +27,7 @@ You can contribute to the repository from inside or outside the OS.
 
 To make changes outside the OS, you can edit files in the `src/` directory, and changes will be reflected in the OS image the next time `make` is executed. The exception to this is files related to the Kernel or the Compiler, as both are compiled when `BootHDIns;` is run within ZenithOS. In these cases, you must make changes within the OS.
 
-To make changes within the OS, boot up the VM and edit files as necessary. If modifying Kernel files, recompile with `BootHDIns;`. if modifying Compiler files, recompile with `CompComp;`. Reboot to see if everything is fine before powering-off the VM. When finished, run `make export-fat32` to pull the files from `ZenithOS.hdd` into the `src/` directory.
+To make changes within the OS, boot up the VM and edit files as necessary. If modifying Kernel files, recompile with `BootHDIns;`. if modifying Compiler files, recompile with `CompComp;`. Reboot to see if everything is fine before powering-off the VM. When finished, run `make export-fat32` or `make export-echfs` (depending on which filesystem you are using) to pull the files from `ZenithOS.hdd` into the `src/` directory.
 
 ## Background
 
@@ -46,6 +46,7 @@ Changes include:
   - No weird shift-space mechanism
   - Caps Lock is reassigned as Backspace
   - Reformatted code for readability
+  - Added comments and documentation
 
 ## Screenshots
 
