@@ -15,7 +15,6 @@ fat32: deps
 	sudo sync
 	sudo umount mnt
 	sudo mkfs.fat `cat loopback_dev`p2
-	mkdir -p mnt
 	sudo mount `cat loopback_dev`p2 mnt
 	sudo cp -r src/* mnt/
 	sudo sync
@@ -51,7 +50,6 @@ echfs: deps
 	sync
 	fusermount -u mnt
 	echfs/echfs-utils -v -m -p1 ZenithOS.hdd quick-format 32768
-	mkdir -p mnt
 	echfs/echfs-fuse --mbr -p1 ZenithOS.hdd mnt
 	cp -r src/* mnt/
 	sync
@@ -77,5 +75,6 @@ clean:
 	rm -f ZenithOS.hdd
 
 deps:
+	git submodule init
 	git submodule update
 	make -C echfs
