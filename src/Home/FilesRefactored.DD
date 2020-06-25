@@ -67,7 +67,7 @@ StartOS.CC
 	ParseStatement.CC
 	ParseVar.CC
 	Templates.CC
-	UAsm.CC
+	UAsm.CC
 	OpCodes.DD
 	CompilerA.HH
 	CompilerB.HH
@@ -84,4 +84,17 @@ StartOS.CC
 		DiskBlkDev.CC
 		DiskCDDVD.CC
 		DiskCFile.CC
+		DiskCache.CC
+		DiskClus.CC
+		DiskCopy.CC
+		DiskDirA.CC
+		DiskDirB.CC
+		DiskDirContext.CC
+		DiskDrive.CC
+		DiskFile.CC
+		DiskFind.CC
+		DiskFormat.CC
+		DiskInt13h.CC
+		DiskStrA.CC
+		DiskStrB.CC
 $FG,7$-Tom$FG,0$
