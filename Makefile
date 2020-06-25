@@ -1,6 +1,6 @@
-.PHONY: fat32 export-fat32 echfs export-echfs run
+.PHONY: fat32 export-fat32 echfs export-echfs run deps clean
 
-fat32: qloader2
+fat32: deps
 	rm -f ZenithOS.hdd
 	dd if=/dev/zero bs=1024M count=0 seek=8 of=ZenithOS.hdd
 	parted -s ZenithOS.hdd mklabel msdos
@@ -40,19 +40,19 @@ export-fat32:
 	rm loopback_dev
 	sudo chown -R $$USER:$$USER src
 
-echfs: qloader2
+echfs: deps
 	rm -f ZenithOS.hdd
 	dd if=/dev/zero bs=1024M count=0 seek=8 of=ZenithOS.hdd
 	fdisk ZenithOS.hdd < fdisk.script
-	echfs-utils -v -m -p0 ZenithOS.hdd quick-format 32768
+	echfs/echfs-utils -v -m -p0 ZenithOS.hdd quick-format 32768
 	mkdir -p mnt
-	echfs-fuse --mbr -p0 ZenithOS.hdd mnt
+	echfs/echfs-fuse --mbr -p0 ZenithOS.hdd mnt
 	cp -r src/* mnt/
 	sync
 	fusermount -u mnt
-	echfs-utils -v -m -p1 ZenithOS.hdd quick-format 32768
+	echfs/echfs-utils -v -m -p1 ZenithOS.hdd quick-format 32768
 	mkdir -p mnt
-	echfs-fuse --mbr -p1 ZenithOS.hdd mnt
+	echfs/echfs-fuse --mbr -p1 ZenithOS.hdd mnt
 	cp -r src/* mnt/
 	sync
 	fusermount -u mnt
@@ -61,7 +61,7 @@ echfs: qloader2
 
 export-echfs:
 	mkdir -p mnt
-	echfs-fuse --mbr -p0 ZenithOS.hdd mnt
+	echfs/echfs-fuse --mbr -p0 ZenithOS.hdd mnt
 	rm -rf src
 	mkdir src
 	cp -r mnt/* src/
@@ -69,9 +69,13 @@ export-echfs:
 	fusermount -u mnt
 	rm -rf mnt
 	chmod -R 777 src
-
-run:
+	
+run: fat32
 	qemu-system-x86_64 -net none -m 2G -enable-kvm -cpu host -smp 4 -drive file=ZenithOS.hdd,format=raw
 
-qloader2:
-	git clone https://github.com/qloader2/qloader2.git
+clean:
+	rm -f ZenithOS.hdd
+
+deps:
+	git submodule update
+	make -C echfs
