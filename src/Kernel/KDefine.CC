@@ -193,15 +193,13 @@ U0 SysDefinesLoad()
 							"f\0"
 							"l\0"
 							"lb\0"
-							"la\0");
+							"la");
 
-	DefineListLoad("ST_BLKDEV_TYPES",
-				"NULL\0RAM\0ATA\0FILE_READ\0FILE_WRITE\0ATAPI\0");
-	DefineListLoad("ST_DRIVE_TYPES",
-				"NULL\0REDSEA\0FAT32\0ISO9660\0NTFS\0UNKNOWN\0");
+	DefineListLoad("ST_BLKDEV_TYPES", "NULL\0RAM\0ATA\0FILE_READ\0FILE_WRITE\0ATAPI");
+	DefineListLoad("ST_DRIVE_TYPES", "NULL\0REDSEA\0FAT32\0ISO9660\0NTFS\0ECHFS\0UNKNOWN");
 	DefineListLoad("ST_COLORS","BLACK\0BLUE\0GREEN\0CYAN\0"
 				"RED\0PURPLE\0BROWN\0LTGRAY\0DKGRAY\0LTBLUE\0LTGREEN\0"
-				"LTCYAN\0LTRED\0LTPURPLE\0YELLOW\0WHITE\0");
+				"LTCYAN\0LTRED\0LTPURPLE\0YELLOW\0WHITE");
 	DefineListLoad("ST_INT_NAMES","Divide Error\0SingleStep\0NMI\0Breakpoint\0"
 				"Overflow\0BOUND Range Exceeded\0Invalid Opcode\0No Math Coprocessor\0"
 				"Double Fault\0Coprocessor Segment Fault\0Invalid TASK\0"

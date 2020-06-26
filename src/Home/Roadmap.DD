@@ -1,0 +1,31 @@
+$WW$$PURPLE$$TX+CX,"Project Roadmap"$$FG$
+
+The goal is to be a fully-functional, self-reproducing x86_64 PC operating system running in $GREEN$ring-0 only$FG$, designed for modern machines with $GREEN$AHCI$FG$ and $GREEN$NVMe$FG$ drives. Other drive types (ATA, USB) will be covered by the $GREEN$INT13h BIOS call$FG$ driver.
+
+Roadmap:
+
+- AHCI driver that is capable of reading and burning CD/DVD discs, and can also work with RW discs.
+- Speed up the OS by doing compiler optimizations like register arguments. Perhaps we can even switch over to the System V ABI.
+- Drop the x87 FPU and add either SSE or AVX support (not both) to the assembler/compiler.
+- Write a new 32-bit color graphics library that uses the added SIMD instructions. Refresh DolDoc for the following:
+- Build a simplistic GUI framework that integrates with DolDoc and the terminal using the new graphics library.
+- Add Intel HD Audio support.
+- Write drivers for the 5 most common ethernet cards.
+- Create a clean and robust networking stack that supports raw sockets, TCP, UDP, IP, ICMP, DHCP, and an HTTP library. Perhaps we can avoid Berkeley Sockets and create our own system?
+- Write applications using this networking stack
+- Write a JSON library, so REST APIs can be used.
+- Whole system VCS, with root being top-level directory. Stored repo inside the OS, you can checkout any commit onto another partition and boot it to see what the OS was like in that commit.
+- Pull updates directly onto root filesystem from network. (it's a repo source tree after all).
+- At this point, bigger fish in the pond can be eyed. Perhaps support for USB keyboard and mice, and native USB mass storage support, significant code clean up and refactoring.
+- Port to other architectures??
+
+Perhaps, in order to reduce LOC in the compiler we can skip on most optimizations.
+
+TODO:
+
+- Review entire API set, enforce a naming scheme, and freeze a subset as guaranteed to exist.
+- Comment EchFS routines.
+- Remove ATA.
+- Remove FAT32.
+- $MA-X+PU,"Code TODO",LM="F(\"TODO\");View;"$
+
