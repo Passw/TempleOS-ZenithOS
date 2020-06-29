@@ -97,9 +97,8 @@ Bool BlkDevInit(CBlkDev *bd)
 				RedSeaFormat(bd->first_drive_let);
 				CallExtStr("RedSeaISO9660", bd->file_disk_name, bd->first_drive_let);
 				res = TRUE;
-				break;
+				break;
 			case BDT_ATA:
-			case BDT_INT13H:
 				bd->max_reads = 128;
 				bd->max_writes = 1;
 				res = ATAInit(bd);
@@ -207,4 +206,3 @@ CBlkDev *Letter2BlkDev(U8 drv_let=0, Bool except=TRUE)
 	else
 		return NULL;
 }
-

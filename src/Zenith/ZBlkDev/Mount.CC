@@ -1,7 +1,7 @@
 #help_index "Install;File/Cmd Line (Typically);Cmd Line (Typically);"
 U8 Mount2(U8 boot_drive_let, CDoc *_doc, Bool _caller_is_prtdisk)
 {//If _doc, called by $LK,"::/Kernel/KConfig.CC"$ else called by $LK,"Mount",A="MN:Mount"$().
-	I64 count, total = 0, num_hints, drv_let, type, unit, prt_num;
+	I64 count, total = 0, num_hints, drv_let, type, unit, prt_num, bios_drive;
 	U8 blks_buf[STR_LEN], addr_buf[STR_LEN], base0_buf[STR_LEN], base1_buf[STR_LEN], *filename = NULL, *filename2 = NULL, res = 0;
 	CATARep *head = NULL, *tmpha;
 	Bool whole_drive, make_free;
@@ -15,7 +15,8 @@ U8 Mount2(U8 boot_drive_let, CDoc *_doc, Bool _caller_is_prtdisk)
 			DriveRep;
 		"\n****** Mount Drives ******\n"
 					"$$GREEN$$A$$FG$$-$$GREEN$$B$$FG$$ are RAM drives.\n"
-					"$$GREEN$$C$$FG$$-$$GREEN$$L$$FG$$ are ATA hard drives.\n"
+					"$$GREEN$$C$$FG$$-$$GREEN$$G$$FG$$ are ATA hard drives.\n"
+					"$$GREEN$$H$$FG$$-$$GREEN$$L$$FG$$ are Int 13h drives.\n"
 					"$$GREEN$$M$$FG$$-$$GREEN$$P$$FG$$ are ISO file read drives.\n"
 					"$$GREEN$$Q$$FG$$-$$GREEN$$S$$FG$$ are ISO file write drives.\n"
 					"$$GREEN$$T$$FG$$-$$GREEN$$Z$$FG$$ are ATAPI CD/DVD drives.\n"
@@ -50,6 +51,12 @@ U8 Mount2(U8 boot_drive_let, CDoc *_doc, Bool _caller_is_prtdisk)
 				case BDT_ISO_FILE_READ:
 					filename = StrGet("File Name:");
 					break;
+				case BDT_INT13H:
+					prt_num = I64Get("Partition Num (Default=All):", prt_num);
+					Int13hRep;
+					bios_drive = I64Get("Select BIOS drive number from list:", bios_drive);
+					DocPrint(doc, "Int13hMount(\'%C\', %d, %d);\n", drv_let, prt_num, bios_drive);
+					goto int13hdone;
 				case BDT_ATA:
 					prt_num = I64Get("Partition Num (Default=All):", prt_num);
 				case BDT_ATAPI:
@@ -130,6 +137,7 @@ U8 Mount2(U8 boot_drive_let, CDoc *_doc, Bool _caller_is_prtdisk)
 					break;
 			}
 			DocPrint(doc, "BlkDevAdd(bd, %d, %d, %d);\n", prt_num, whole_drive, make_free);
+int13hdone:
 			if (_doc) //Called by $LK,"::/Kernel/KConfig.CC"$
 				count++;
 			else

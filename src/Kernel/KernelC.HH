@@ -377,7 +377,9 @@ extern I64 BlkDevAdd(CBlkDev *bd,I64 prt_num=I64_MIN,
 extern U0 DiskCacheInit(I64 size_in_U8s);
 public extern U0 DiskCacheInvalidate(CDrive *drive);
 public extern I64 MountIDEAuto();
-public extern U0 MountInt13hAuto();
+public extern U0 MountInt13hAuto();
+extern U0 Int13hRep();
+extern CBlkDev *Int13hMount(U8 first_drive_let, I64 prt_num=I64_MIN, U8 bios_drive);
 public extern CBlkDevGlobals blkdev;
 
 #help_index "Graphics/Color"
