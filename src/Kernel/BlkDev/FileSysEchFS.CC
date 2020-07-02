@@ -15,20 +15,25 @@
 #define ECHFS_BLKDEV_CACHE_DIRTY	2
 
 Bool EchFSBlkDevCache(CDrive *drive, U64 block)
-{
+{//Cache a block (block) (not to be confused with an echfs block, this is just a group of sectors)
+ //from a CDrive (drive) into the CDrive echfs block cache.
 	switch (drive->echfs_id_table->dev_cache_state)
 	{
 		case ECHFS_BLKDEV_CACHE_READY:
+			//Block is already cached, do nothing.
 			if (block == drive->echfs_id_table->dev_cached_block)
 				return TRUE;
-			// FALLTHRU
+			//FALLTHRU
 		case ECHFS_BLKDEV_CACHE_NOTREADY:
 loadup:
+			//Cache is not ready, we fell through, or a cache flush occurred. Cache the block.
 			BlkRead(drive, drive->echfs_id_table->dev_cache, drive->drv_offset + block, 1);
 			drive->echfs_id_table->dev_cached_block = block;
 			drive->echfs_id_table->dev_cache_state  = ECHFS_BLKDEV_CACHE_READY;
 			return TRUE;
 		case ECHFS_BLKDEV_CACHE_DIRTY:
+			//Cache is dirty, meaning something has been written to the block's cache, but not yet
+			//commited to disk. Commit change to disk, then jump to loadup and load the new block to cache.
 			if (block == drive->echfs_id_table->dev_cached_block)
 				return TRUE;
 			BlkWrite(drive, drive->echfs_id_table->dev_cache, drive->drv_offset + drive->echfs_id_table->dev_cached_block, 1);
@@ -37,7 +42,8 @@ loadup:
 }
 
 Bool EchFSBlkDevRead(CDrive *drive, U8 *buffer, U64 loc, U64 count)
-{
+{//Read granularly (aka, similarily to an ANSI C fread) from a CDrive (drive), using the block cache
+ //loaded using EchFSBlkDevCache.
 	U64 block, chunk, offset, progress = 0;
 	while (progress < count)
 	{
@@ -58,7 +64,8 @@ Bool EchFSBlkDevRead(CDrive *drive, U8 *buffer, U64 loc, U64 count)
 }
 
 Bool EchFSBlkDevWrite(CDrive *drive, U8 *buffer, U64 loc, U64 count)
-{
+{//Write granularly (aka, similarily to an ANSI C fwrite) from a CDrive (drive), using the block cache
+ //loaded using EchFSBlkDevCache.
 	U64 block, chunk, offset, progress = 0;
 	while (progress < count)
 	{
@@ -70,7 +77,7 @@ Bool EchFSBlkDevWrite(CDrive *drive, U8 *buffer, U64 loc, U64 count)
 		chunk = count - progress;
 		offset = (loc + progress) % BLK_SIZE;
 		if (chunk > BLK_SIZE - offset)
-			chunk = BLK_SIZE - offset;
+			chunk = BLK_SIZE - offset;
 
 		MemCopy(&drive->echfs_id_table->dev_cache[offset], buffer + progress, chunk);
 		progress += chunk;
@@ -81,7 +88,7 @@ Bool EchFSBlkDevWrite(CDrive *drive, U8 *buffer, U64 loc, U64 count)
 }
 
 Bool EchFSReadEntry(CDrive *drive, CEchFSEntry *ret, U64 entry)
-{
+{//Read an entry (entry) from the filesystem's directory, and write it to output argument ret.
 	CEchFSIdTable *id_tab = drive->echfs_id_table;
 	U64 loc = id_tab->dir_start * id_tab->bytes_per_block + entry * sizeof(CEchFSEntry);
 
@@ -94,22 +101,24 @@ Bool EchFSReadEntry(CDrive *drive, CEchFSEntry *ret, U64 entry)
 	return TRUE;
 }
 
-Bool EchFSWriteEntry(CDrive *drive, CEchFSEntry *p, U64 entry)
-{
+Bool EchFSWriteEntry(CDrive *drive, CEchFSEntry *ptr, U64 entry)
+{//Write an entry (entry) to the filesystem's directory, reading it from ptr.
 	CEchFSIdTable *id_tab = drive->echfs_id_table;
 	U64 loc = id_tab->dir_start * id_tab->bytes_per_block + entry * sizeof(CEchFSEntry);
 
 	if (loc >= (id_tab->dir_start + id_tab->dir_size) * id_tab->bytes_per_block)
 		return FALSE;
 
-	if (!EchFSBlkDevWrite(drive, p, loc, sizeof(CEchFSEntry)))
+	if (!EchFSBlkDevWrite(drive, ptr, loc, sizeof(CEchFSEntry)))
 		return FALSE;
 
 	return TRUE;
 }
 
 U64 EchFSSearch(CDrive *drive, CEchFSEntry *entry, U8 *name, U64 parent, U8 type)
-{//Returns unique entry #, ECHFS_SEARCH_FAILURE upon failure/not found.
+{//Returns directory entry number of file "name", with parent "parent", of type "type".
+ //Returns ECHFS_SEARCH_FAILURE upon failure/not found.
+ //On success, the entry is written to output argument "entry".
 	CEchFSIdTable *id_tab = drive->echfs_id_table;
 	U64 i;
 
@@ -130,7 +139,12 @@ U64 EchFSSearch(CDrive *drive, CEchFSEntry *entry, U8 *name, U64 parent, U8 type
 }
 
 Bool EchFSResolvePath(CDrive *drive, CEchFSPathResult *ret, U8 *path, U8 type, U64 parent)
-{
+{//Resolve a hierarchical path to an item into a CEchFSPathResult structure, which provides information
+ //about the parent of the requested item, and the item itself in case it exists.
+ //Returns FALSE in case the path has a directory element (other than the target one) which does not exist.
+ //Otherwise, ret is always validly return.
+ //ret->not_found is set to TRUE in case the path is valid except for the last item (the target). Even if
+ //ret->not_found is set, the information regarding the parent of the not found target is valid.
 	U8	 name[201];
 	Bool last = FALSE;
 	U64	 i, search_res;
@@ -149,11 +163,11 @@ Bool EchFSResolvePath(CDrive *drive, CEchFSPathResult *ret, U8 *path, U8 type, U
 				ret->parent.payload = ECHFS_ROOT_DIR_ID;
 				return TRUE;
 			case ECHFS_TYPE_FILE:
-				// Fail if looking for a file named "/"
+				//Fail if looking for a file named "/"
 				return FALSE;
 		}
 	}
-	// Start with the parent
+	//Start with the parent
 	ret->parent.payload = parent;
 
 	if (*path == '/')
@@ -190,7 +204,7 @@ next:
 }
 
 Bool EchFSCd(U8 *name, I64 cur_dir_clus)
-{
+{//Returns TRUE if directory name in cur_dir_cluster is valid, else FALSE.
 	CEchFSPathResult pres;
 	Bool unlock, ret;
 
@@ -212,7 +226,8 @@ Bool EchFSCd(U8 *name, I64 cur_dir_clus)
 }
 
 Bool EchFSFindEmptyEntry(CDrive *drive, U64 *_free_entry, U64 *_free_dir_id)
-{
+{//Finds an empty directory entry on drive, and returns its index in return argument _free_entry.
+ //Additionally, it returns a free directory ID in return argument _free_dir_id.
 	CEchFSIdTable *id_tab = drive->echfs_id_table;
 	CEchFSEntry entry;
 	U64 i;
@@ -243,7 +258,8 @@ Bool EchFSFindEmptyEntry(CDrive *drive, U64 *_free_entry, U64 *_free_dir_id)
 }
 
 Bool EchFSMkDir(CDrive *drive, U8 *cur_dir, U8 *name)
-{
+{//Creates directory "name" within directory "cur_dir" on drive.
+ //Returns FALSE on failure.
 	U8 *full_path;
 	CEchFSPathResult pres;
 	CEchFSEntry entry;
@@ -303,12 +319,12 @@ Bool EchFSMkDir(CDrive *drive, U8 *cur_dir, U8 *name)
 }
 
 Bool EchFSDirNew(CDrive *drive, U8 *cur_dir, CDirEntry *entry)
-{
+{//Same as EchFSMkDir but creates a directory based on a CDirEntry struct.
 	return EchFSMkDir(drive, cur_dir, entry->name);
 }
 
 U0 EchFSInit(CDrive *drive)
-{
+{//Initialises the filesystem context on drive.
 	"EchFSInit called\n";
 
 	Bool unlock;
@@ -363,7 +379,7 @@ U0 EchFSInit(CDrive *drive)
 }
 
 Bool EchFSFreeBlockChain(CDrive *drive, U64 block)
-{
+{//Frees a blockchain from drive starting at block for use.
 	U64 fat_addr, cur_block, free_block = 0;
 	CEchFSIdTable *id_tab;
 
@@ -381,7 +397,10 @@ Bool EchFSFreeBlockChain(CDrive *drive, U64 block)
 }
 
 Bool EchFSAllocBlockChainContiguous(CDrive *drive, U64 *_block, U64 count)
-{
+{//Allocate a contiguous count long chain of blocks on drive, return the first block of the chain in return
+ //argument _block.
+ //Returns FALSE on failure, which could indicate we're either out of space, or there is no contiguous chain
+ //long enough for the allocation.
 	U64 fat_addr, cur_block, i, c;
 	CEchFSIdTable *id_tab;
 	Bool unlock;
@@ -423,7 +442,8 @@ Bool EchFSAllocBlockChainContiguous(CDrive *drive, U64 *_block, U64 count)
 }
 
 Bool EchFSAllocBlockChain(CDrive *drive, U64 *_block, U64 count)
-{
+{//Allocate a count long chain of blocks on drive, return the first block of the chain in return argument _block.
+ //Returns FALSE on failure, which could indicate we're out of space on the disk.
 	U64 fat_addr, cur_block, i;
 	CEchFSIdTable *id_tab;
 	Bool unlock;
@@ -466,7 +486,9 @@ Bool EchFSAllocBlockChain(CDrive *drive, U64 *_block, U64 count)
 }
 
 I64 EchFSFilesDel(CDrive *drive, U8 *cur_dir, U8 *files_find_mask, I64 fuf_flags, Bool del_dir, Bool print_msg)
-{
+{//Delete one or more files from cur_dir of drive, based on the files_find_mask matches and fuf_flags.
+ //If del_dir is set, recursively delete matching directories.
+ //if print_msg is set, print a message for each deleted file/dir.
 	Bool unlock_break, unlock;
 	CEchFSIdTable *id_tab;
 	CDirEntry *tree = NULL, *entry;
@@ -537,7 +559,8 @@ unlock_and_quit:
 }
 
 I64 EchFSFileWrite(CDrive *drive, U8 *cur_dir, U8 *filename, U8 *buf, I64 size, CDate cdt, I64 attr)
-{
+{//Write file to cur_dir to drive wholly from a memory buffer (buf) of size "size".
+ //TODO: cdt and attrs are currently ignored.
 	U8 *full_path;
 	CEchFSPathResult pres;
 	U64 cur_block, start_block, fat_addr, size_in_blocks, entry_id, dir_id;
@@ -625,7 +648,9 @@ I64 EchFSFileWrite(CDrive *drive, U8 *cur_dir, U8 *filename, U8 *buf, I64 size, 
 }
 
 U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename, I64 *_size, I64 *_attr)
-{
+{//Read file from cur_dir from drive wholly into a MAlloc allocated memory buffer, and return this buffer.
+ //Return file size and file attribute in _size and _attr return arguments, respectively.
+ //Return NULL if file not found or error.
 	U8 *full_path, *buf, *p;
 	CEchFSPathResult pres;
 	U64 i, fat_addr, size_in_blocks, *block_chain;
@@ -712,18 +737,17 @@ U8 *EchFSFileRead(CDrive *drive, U8 *cur_dir, U8 *filename, I64 *_size, I64 *_at
 }
 
 CDirEntry *EchFSFilesFind(U8 *files_find_mask, I64 fuf_flags, CDirEntry *parent=NULL)
-{/*This function creates a tree of directory Fs->cur_dir.
-   CDirEntry* returned points to the first entry of a linked list describing the entries of Fs->cur_dir.
-   $UL$->next$UL,0$ points to the next entry in the same dir.
-   $UL$->sub$UL,0$ is set for entries of directory type IF fuf_flag $LK,"FUf_RECURSE",A="MN:FUf_RECURSE"$ is set else it is set to NULL.
-   It will point to the linked list describing the entries of the entry's described directory.
-   $UL$->parent$UL,0$ is NULL for all entries at the base level (Fs->cur_dir).
-   It points to the beginning of the parent directory's linked list.
-   For all entries of subdirectories of Fs->cur_dir (see ->sub).
-   Furthermore, for each entry found in a given directory,
-   one must add the the entry to the tree if and only if a call to FilesFindMatch() with arguments
-   FilesFindMatch(entry_name, files_find_mask, fuf_flags) returns TRUE.
-*/
+{//This function creates a tree of directory Fs->cur_dir.
+ //CDirEntry* returned points to the first entry of a linked list describing the entries of Fs->cur_dir.
+ //->next$UL,0$ points to the next entry in the same dir.
+ //$UL$->sub$UL,0$ is set for entries of directory type IF fuf_flag $LK,"FUf_RECURSE",A="MN:FUf_RECURSE"$ is set else it is set to NULL.
+ //It will point to the linked list describing the entries of the entry's described directory.
+ //$UL$->parent$UL,0$ is NULL for all entries at the base level (Fs->cur_dir).
+ //It points to the beginning of the parent directory's linked list.
+ //For all entries of subdirectories of Fs->cur_dir (see ->sub).
+ //Furthermore, for each entry found in a given directory,
+ //one must add the the entry to the tree if and only if a call to FilesFindMatch() with arguments
+ //FilesFindMatch(entry_name, files_find_mask, fuf_flags) returns TRUE.
 	CDrive *drive = Fs->cur_dv;
 	CDirEntry *node, *ret = NULL;
 	CEchFSIdTable *id_tab;
@@ -837,7 +861,9 @@ no_dot_entries:
 }
 
 Bool EchFSFileFind(CDrive *drive, I64 cur_dir_clus, U8 *filename, CDirEntry *_res, I64 fuf_flags=0)
-{
+{//Find a single file in drive, based on its filename, the parent directory entry (cur_dir_clus), and fuf_flags
+ //and return a CDirEntry in return argument _res.
+ //Return FALSE if file not found or error.
 	U8 name[CDIR_FILENAME_LEN];
 	CEchFSPathResult pres;
 	U64 type;
@@ -872,7 +898,8 @@ Bool EchFSFileFind(CDrive *drive, I64 cur_dir_clus, U8 *filename, CDirEntry *_re
 			type = ECHFS_TYPE_FILE;
 
 		if (!EchFSResolvePath(drive, &pres, name, type, cur_dir_clus(U64)) ||
-			pres.not_found) {
+			pres.not_found)
+		{
 			if (unlock)
 				DriveUnlock(drive);
 			return FALSE;
