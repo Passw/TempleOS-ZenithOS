@@ -114,6 +114,6 @@ clean:
 	rm -f ZenithOS.hdd
 
 deps:
-	git submodule init
-	git submodule update
+	git clone https://github.com/qword-os/echfs
+	git clone https://github.com/qloader2/qloader2
 	$(MAKE) -C echfs
