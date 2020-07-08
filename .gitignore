@@ -1,3 +1,8 @@
 0000Boot/
 *.hdd
+*.vhd
 *.bak
+echfs/
+qloader2/
+System Volume Information/
+.vscode/
