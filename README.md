@@ -6,12 +6,23 @@
 The Zenith Operating System is a modernized, professional fork of the 64-bit Temple Operating System. It is a direct reaction against Jewish technological subversion, and also against the corporate takeover of free and open source software to be used as a mouthpiece for furthering their political agenda.
 
 Features in development include:
-  - Fully-functional AHCI support.
-  - ~~VBE support~~ 32-bit color VBE graphics.
-  - A new GUI framework in 32-bit color.
-  - Compiler optimizations for speed improvements.
-  - SSE2+ instruction support in compiler and assembler.
-  - Network card drivers and a networking stack.
+  - Fully-functional AHCI support
+  - ~~VBE support~~ 32-bit color VBE graphics
+  - A new GUI framework in 32-bit color
+  - Compiler optimizations for speed improvements
+  - SSE2+ instruction support in compiler and assembler
+  - Network card drivers and a networking stack
+
+Changes include:
+  - 60 FPS
+  - VBE graphics with variable resolutions
+  - 440Hz 'A' tuning changed to 432Hz
+  - HolyC -> CosmiC
+  - System-wide renaming for clarity
+  - No weird shift-space mechanism
+  - Caps Lock is reassigned as Backspace
+  - Reformatted code for readability
+  - Added comments and documentation
 
 ![](/screenshots/screenshot2.png)
 
@@ -50,7 +61,7 @@ After cloning the repo, run `.\make.ps1 get-deps`. This will clone [qloader2](ht
 #### VirtualBox
 
 If you are using VirtualBox, you should put the install directory of VirtualBox (usually `C:\Program Files\Oracle\VirtualBox`) in your PATH for a couple of reasons. After generating a disk image, attach it to your VM. 
-VirtualBox stores the UUID of that disk image in its internal volume manager. When you generate a new image, it has a new UUID, and VirtualBox refuses to run because the UUID of the disk has changed. The first reason is so that the script can reuse the same UUID everytime a new disk is generated. This way, VirtualBox won't complain that the attached disk has the wrong UUID. The second reason is so that you can use the `run` command in the script to launch the VM from the terminal.
+VirtualBox stores the UUID of that disk image in its internal volume manager. When you generate a new image, it has a new UUID, and VirtualBox refuses to run the VM because the UUID of the disk has changed. The first reason is so that the script can reuse the same UUID everytime a new disk is generated. This way, VirtualBox won't complain that the attached disk has the wrong UUID. The second reason is so that you can use the `run` command in the script to launch the VM from the terminal.
 
 ### Contributing
 
@@ -67,17 +78,6 @@ In around November of 2019, I decided I wanted to continue Terry's work in a dir
 At first, I was developing exclusively inside a VM and occasionally generating ISOs as official releases. This was not a good approach, as things broke and I had no way of telling which changes caused what. So I decided to scrap that and restart from scratch.\
 Releases of the "old" Zenith are currently archived on the `mega.nz` website:
   - [Previous Releases](https://mega.nz/#F!ZIEGmSRQ!qvL6Wk6THzE-dazkfT6N3Q)
-
-Changes include:
-  - 60FPS.
-  - VBE graphics with variable resolutions.
-  - 440Hz 'A' tuning changed to 432Hz.
-  - HolyC -> CosmiC.
-  - System-wide renaming for clarity
-  - No weird shift-space mechanism
-  - Caps Lock is reassigned as Backspace
-  - Reformatted code for readability
-  - Added comments and documentation
 
 ## Screenshots
 
