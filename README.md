@@ -13,6 +13,9 @@ Features in development include:
   - SSE2+ instruction support in compiler and assembler
   - Network card drivers and a networking stack
 
+![](/screenshots/screenshot2.png)
+
+
 Changes include:
   - 60 FPS
   - VBE graphics with variable resolutions
@@ -23,8 +26,6 @@ Changes include:
   - Caps Lock is reassigned as Backspace
   - Reformatted code for readability
   - Added comments and documentation
-
-![](/screenshots/screenshot2.png)
 
 ## Getting started
 
@@ -42,11 +43,11 @@ The source code and binary files for ZenithOS can be found in the `src/` directo
 ### Windows
 You can also build the disk image on Windows (I personally think it's a more robust system). You will need Git installed and usable through the terminal. You will need to be on an edition of Windows that is not Home Edition in order to enable the needed Hyper-V disk image tools. There are multiple ways to upgrade to Professional or Education Edition you can find with a quick web search. You should also enable Developer mode under `Settings -> Developer Settings`. The required setting is under "Powershell", to enable execution of local unsigned Powershell scripts.
 
+You will need some kind of C compiler, in order to create the installer executable for writing [qloader2](https://github.com/qloader2/qloader2) to the disk image. If you have Visual Studio with the C++ workload installed, or even just the [Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/), it will compile it automatically. If you want to avoid having MSVC on your machine, the program is in ANSI C, so any compliant C compiler will work. The script checks for [tcc](https://bellard.org/tcc/) and [clang](https://releases.llvm.org/download.html) on your PATH, and I have tested both to be working. Avoid GNU bloat like MinGW or Cygwin.
+
 The Powershell script `make.ps1` must be run from an elevated Powershell process. It will guide you through enabling the two needed Hyper-V features. Avoiding enabling the other Hyper-V features is recommended, because if they are enabled (specifically the hypervisor), it will force any other virtualization software (like VirtualBox) to use the native Hyper-V API, which is terribly slow.
 
-After cloning the repo, run `.\make.ps1 get-deps`. This will clone [qloader2](https://github.com/qloader2/qloader2) into the repo. You will need a compiler to create the `qloader2-install` executable in order to write the bootloader to the disk image. If you have Visual Studio with the C++ workload installed, it would be as simple as launching the x64/x86 Native Tools Command Prompt, going to the qloader2 directory, and running `cl qloader2-install.c`. If you wish to avoid pulling in the entirety of Visual Studio, you could look into installing just the [Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/), and if you want to avoid having MSVC on your machine altogether, the program is in ANSI C, so any C compiler would work. I have tested both [clang](https://releases.llvm.org/download.html) and [tcc](https://bellard.org/tcc/) for this purpose. Avoid GNU bloat.
-
- Once you have the executable, you can just run `.\make.ps1` to create the FAT32 disk image.
+ Once you have a compiler, just run `.\make.ps1` to create the FAT32 disk image. Optional arguments can be specified:
  
  ```make.ps1 create <size=2GB> <driveletter=Z>```
 
