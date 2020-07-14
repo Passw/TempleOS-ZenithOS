@@ -1,8 +1,7 @@
 #requires -RunAsAdministrator
-param ($target="create", [uint64]$diskSize=2GB, $driveLetter='Z')
+param ($target="create", [uint64]$diskSize=2GB, $driveLetter='Z', $vhdPath=".\ZenithOS.vhd")
 
 $ql2Url = "https://github.com/qloader2/qloader2"
-$vhdPath = ".\ZenithOS.vhd"
 $vboxPresent = Get-Command "VBoxManage" -ErrorAction SilentlyContinue
 
 #You cannot enable _just_ the powershell module and services feature using `Enable-WindowsOptionalFeature`, it only does the whole package.
@@ -137,7 +136,7 @@ function New-Qloader2InstallBinary
 	}
 }
 
-function Get-Deps
+function Get-Deps 
 {
 	if (-not (Test-Path qloader2))
 	{
@@ -157,10 +156,10 @@ function Update-Deps
 
 switch ($target)
 {
-    "create" 		{ Get-Deps; New-FAT32VHD } #create <size> <driveLetter-to-use>
+    "create" 		{ Get-Deps; New-FAT32VHD } #create -size=2GB -driveLetter=Z
 	"export"		{ Export-FAT32VHD }
-	"mount"			{ Mount-FAT32VHD }
-	"dismount"		{ Dismount-VHD $vhdPath }
+	"mount"			{ Mount-FAT32VHD } #mount -vhdPath=.\ZenithOS.vhd -driveLetter=Z
+	"dismount"		{ Dismount-VHD $vhdPath } #dismount -vhdPath=.\ZenithOS.vhd  -driveLetter=Z
 	"get-deps"		{ Get-Deps}
 	"update-deps"	{ Update-Deps}
 	"run"			{ Start-VBoxVM }

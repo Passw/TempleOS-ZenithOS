@@ -1,4 +1,4 @@
-<a href="https://discord.gg/ZS5ygF3"><img alt="Discord" src="https://img.shields.io/discord/661062825027829770?style=flat-square"></a>
+<a href="https://discord.gg/ZS5ygF3"><img alt="Discord" src="https://img.shields.io/discord/724073544014626857?style=flat-square"></a>
 ![Website](https://img.shields.io/website?down_color=lightgray&down_message=offline&style=flat-square&up_color=green&up_message=online&url=https%3A%2F%2Fzenithos.org)
 ![goto counter](https://img.shields.io/github/search/VoidNV/ZenithOS/goto?style=flat-square)
 # ZenithOS
