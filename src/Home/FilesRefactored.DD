@@ -76,6 +76,8 @@ StartOS.CC
 /Kernel/
 	KStart64.CC
 
+	KernelA.HH
+
 	BlkDev/
 		DiskATA.CC
 		DiskATAId.CC
@@ -96,5 +98,5 @@ StartOS.CC
 		DiskFormat.CC
 		DiskInt13h.CC
 		DiskStrA.CC
-		DiskStrB.CC
+		DiskStrB.CC
 $FG,7$-Tom$FG,0$
