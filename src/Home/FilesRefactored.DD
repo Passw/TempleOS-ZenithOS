@@ -76,7 +76,9 @@ StartOS.CC
 /Kernel/
 	KStart64.CC
 
-	KernelA.HH
+	KernelA.HH
+	KernelB.HH
+	KernelC.HH
 
 	BlkDev/
 		DiskATA.CC
